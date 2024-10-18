@@ -1,0 +1,1 @@
+Este material foi desenvolvido durante meu pós-doutorado na UFRJ, onde tive a oportunidade de colaborar na disciplina de Introdução ao Método dos Elementos Finitos, oferecida pelo Programa de Pós-Graduação em Informática da UFRJ. Agradeço à CAPES pelo apoio financeiro por meio da concessão da bolsa.
