@@ -471,7 +471,7 @@ Observações:
 
 ``\bullet``  ``h_1`` e ``h_2`` representam a base e altura do retângulo ``\Omega^e``.
 
-``\bullet``  O diâmetro do retângulo ``\Omega^e`` é o comprimento da hipotenusa, dado por ``h=\sqrt{(h_1)^2+(h_1)^2}``.
+``\bullet``  O diâmetro do retângulo ``\Omega^e`` é o comprimento da hipotenusa, dado por ``h=\sqrt{(h_1)^2+(h_2)^2}``.
 
 ``\bullet``  O determinante Jacobiano dessa aplicação é dado por 
 ```math
