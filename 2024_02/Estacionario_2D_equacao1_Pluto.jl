@@ -634,7 +634,7 @@ Portanto, sempre que ``J`` for diferente de zero, podemos tomar a inversa, obten
 
 # ╔═╡ a23031f6-073c-4d90-bbf3-280cd7d74bf5
 @doc raw"""
-	x₁_de_ξ(ξ₁::Float64, h₁::Float64, p₁::Vector{Float64}) -> Float64
+	x₁_de_ξ(ξ₁::Float64, h₁::Float64, p₁::Float64) -> Float64
 
 Calcula a primeira componente da mudança de variável de um ponto ``\xi`` pertencente ao domínio de referência ``\mathcal{R}=]-1,1[ \times]-1,1[`` para o ponto correspondente `x` no elemento finito retangular ``\Omega^e``. 
 ```math
@@ -656,7 +656,7 @@ end
 
 # ╔═╡ 3e07b842-9d3e-4424-b187-a1a4a2ae5ddf
 @doc raw"""
-	x₂_de_ξ(ξ₂::Float64, h₂::Float64, p₂::Vector{Float64}) -> Float64
+	x₂_de_ξ(ξ₂::Float64, h₂::Float64, p₂::Float64) -> Float64
 
 Calcula a segunda componente da mudança de variável de um ponto ``\xi`` pertencente ao domínio de referência ``\mathcal{R}=]-1,1[ \times]-1,1[`` para o ponto correspondente `x` no elemento finito retangular ``\Omega^e``.
 ```math
