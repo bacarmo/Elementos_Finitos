@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 2f9d63db-0ffe-43b1-a29f-b4c92305a472
-using PlutoUI,PlutoTeachingTools, Plots, LaTeXStrings, GaussQuadrature, SparseArrays, DataFrames
+using PlutoUI,PlutoTeachingTools, Plots, LaTeXStrings, GaussQuadrature, SparseArrays, DataFrames, LinearAlgebra
 
 # ╔═╡ 0cc5dd29-8119-4fe5-9047-b2ee62eb6893
 # ╠═╡ skip_as_script = true
@@ -350,6 +350,11 @@ function ϕ(ξ₁,ξ₂,a)
 	end
 end
 
+# ╔═╡ 760f8dfb-866a-4b66-827f-f0a2536923af
+function ϕ(ξ₁::Float64, ξ₂::Float64) :: Vector{Float64}
+	[(1-ξ₁)*(1-ξ₂)/4, (1+ξ₁)*(1-ξ₂)/4, (1+ξ₁)*(1+ξ₂)/4, (1-ξ₁)*(1+ξ₂)/4]
+end
+
 # ╔═╡ 26f290b8-ce09-44d8-8d60-aad4fa04367a
 function ∂ϕ_∂ξ₁(ξ₁,ξ₂,a)
 	if a == 1
@@ -365,6 +370,11 @@ function ∂ϕ_∂ξ₁(ξ₁,ξ₂,a)
 	end
 end
 
+# ╔═╡ 4de89aa8-a3b2-41e4-a36f-b3047eee05b3
+function ∂ϕ_∂ξ₁(ξ₂::Float64) :: Vector{Float64}
+	[-(1-ξ₂)/4, (1-ξ₂)/4, (1+ξ₂)/4, -(1+ξ₂)/4]
+end
+
 # ╔═╡ 6f269a14-472a-4cd3-b5a3-99a61d9a3f23
 function ∂ϕ_∂ξ₂(ξ₁,ξ₂,a)
 	if a == 1
@@ -378,6 +388,11 @@ function ∂ϕ_∂ξ₂(ξ₁,ξ₂,a)
 	else
 		error("a deve ser 1, 2, 3 ou 4.")
 	end
+end
+
+# ╔═╡ 770cc3e6-6902-4b85-a8d6-9ce7e8e9fc66
+function ∂ϕ_∂ξ₂(ξ₁::Float64) :: Vector{Float64}
+	[-(1-ξ₁)/4, -(1+ξ₁)/4, (1+ξ₁)/4, (1-ξ₁)/4]
 end
 
 # ╔═╡ 417b8cd2-bcda-4354-9e8d-d9c2492f8d7a
@@ -441,6 +456,42 @@ html"""
 <img src="https://raw.githubusercontent.com/bacarmo/Elementos_Finitos/main/2024_02/imagens/malha2D.jpeg">
 </center>
 """
+
+# ╔═╡ 1b7efd80-b78d-47a0-afe6-a4154979f018
+function abscissas_malha_regular(Nx1::Int64, h₁::Float64, e::Int64)::Vector{Float64}
+	i = mod(e-1,Nx1) # Inteiro entre 0 e Nx1-1
+	cst1 = i*h₁
+	cst2 = (i+1)*h₁
+	return [cst1, cst2, cst2, cst1]
+end	
+
+# ╔═╡ f888cec3-be68-42e5-890f-e2b3082430aa
+function ordenadas_malha_regular(Nx1::Int64, h₂::Float64, e::Int64)::Vector{Float64}
+	j = div(e-1,Nx1) # Inteiro entre 0 e Nx2-1
+	cst1 = j*h₂
+	cst2 = (j+1)*h₂
+	return [cst1, cst1, cst2, cst2]
+end	
+
+# ╔═╡ 6d71c7b7-4835-4709-bb72-34afc1dde92a
+function teste_malha_regular(Nx1, Nx2)
+	h₁ = 1/Nx1; h₂ = 1/Nx2;
+	
+	X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
+	for e=1:Nx1*Nx2
+		X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
+		Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
+	end
+	
+    display("Nx1 = $Nx1; Nx2 = $Nx2; h₁ = 1/$Nx1; h₂ = 1/$Nx2;")
+	display("Abscissas: ")
+	display(X)
+	display("Ordenadas: ")
+	display(Y)
+end
+
+# ╔═╡ 66cd54c0-c1ad-4da7-ba6c-dfcc42f78ea4
+teste_malha_regular(4, 2)
 
 # ╔═╡ 2450b17f-982b-4af8-bb68-7cca4f1944d6
 md"### Mudança de variável"
@@ -600,8 +651,8 @@ O sistema em ``(\bigstar)`` pode ser reescrito como
 \frac{\partial\phi_a}{\partial \xi_2}(\xi)
 \end{bmatrix}.
 ```
-Note que o determinante da matriz ``2\times 2`` é igual a ``J``, o determinante Jacobiano da aplicação que realiza a mudança de variável de ``\xi`` para ``x``. 
-Portanto, sempre que ``J`` for diferente de zero, podemos tomar a inversa, obtendo:
+Note que o determinante da matriz ``2\times 2`` é igual a ``J(\xi)``, o determinante Jacobiano da aplicação que realiza a mudança de variável de ``\xi`` para ``x``. 
+Portanto, sempre que ``J(\xi)`` for diferente de zero, podemos tomar a inversa, obtendo:
 ```math
 \begin{bmatrix}
 \displaystyle
@@ -611,7 +662,7 @@ Portanto, sempre que ``J`` for diferente de zero, podemos tomar a inversa, obten
 \frac{\partial\varphi_a^e}{\partial x_2}\big(x(\xi)\big)
 \end{bmatrix}
 =
-\frac{1}{J}
+\frac{1}{J(\xi)}
 \begin{bmatrix}
   \displaystyle\frac{\partial x_2}{\partial\xi_2}(\xi)
 &
@@ -695,7 +746,6 @@ F_a^e
 =& \frac{h_1h_2}{4}\int_{-1}^1\int_{-1}^1 f\big(x(\xi)\big) \phi_a(\xi) d\xi_1\,d\xi_2.
 \end{align}
 ```
-
 """
 
 # ╔═╡ 3661a97c-6d06-41d0-b7df-71a8c1f70adc
@@ -1502,7 +1552,7 @@ Denotando por ``\bar{c}=[c;0]`` o vetor de coeficientes da solução aproximada 
 @doc raw"""
     erro_norma_L2(u::Function, c̄::Vector{Float64}, Nx1::Int64, Nx2::Int64, EQoLG::Matrix{Int64}) -> Float64
 
-Calcula o erro na norma ``L^2(\Omega)`` entre a solução exata `u` e a solução aproximada representada pelos coeficientes `c̄` em uma malha de elementos retangulares.
+Calcula o erro na norma ``L^2(\Omega)`` entre a solução exata `u` e a solução aproximada representada pelos coeficientes `c̄` em uma malha de elementos finitos retangulares.
 
 # Parâmetros
 - `u::Function`: Função u(x₁,x₂) que representa a solução exata da EDP.
@@ -1567,10 +1617,10 @@ function erro_norma_L2(u::Function, c̄::Vector{Float64}, Nx1::Int64, Nx2::Int64
 end
 
 # ╔═╡ fa49b560-e000-47cc-ba85-16c111d89acd
-md"# Simulações numéricas"
+md"### Simulações numéricas"
 
 # ╔═╡ 8bef9e7a-6def-4751-bae8-d53343e94a3f
-md"## Solução aproximada vs solução exata"
+md"#### Solução aproximada vs solução exata"
 
 # ╔═╡ de6cac6c-1f5c-4c44-9e1d-78c6712d3d45
 function plot_solução_aproximada(c̄::Vector{Float64}, Nx1::Int64, Nx2::Int64, EQoLG::Matrix{Int64})
@@ -1683,7 +1733,7 @@ end
 solução_aproximada_vs_exata()
 
 # ╔═╡ 8ff37696-bb35-445b-8ac0-575f2c74b9db
-md"## Estudo da convergência do erro"
+md"#### Estudo da convergência do erro"
 
 # ╔═╡ b766d178-ce59-4055-bd43-035b66e43920
 function estudo_do_erro()
@@ -1762,12 +1812,933 @@ end
 # ╔═╡ 08ccecca-f127-4adb-bd0e-0fdb2979b62a
 plt = plot_estudo_do_erro()
 
+# ╔═╡ 0351f91e-0ff0-4278-8662-21337048f137
+md"## Caso 2: ``\Omega^e`` quadrilátero"
+
+# ╔═╡ 02e87aa0-31bc-4682-83d1-8c780916a8a6
+md"### Mudança de variável"
+
+# ╔═╡ b5d52f2c-4f5e-4a0b-9213-3ddb7b127037
+md"""
+Considere a aplicação que mapeia cada ponto ``\xi\in\mathcal{R}=]-1,1[\times]-1,1[`` a um ponto ``x\in\Omega^e`` dada por
+```math
+x(\xi) = \Big(
+x_1(\xi_1,\xi_2),
+x_2(\xi_1,\xi_2)
+\Big),
+\quad\hbox{onde}\quad
+\begin{align}
+\left\{
+\begin{aligned}
+x_1(\xi_1,\xi_2)
+= \sum_{a=1}^4 X_a^e\phi_a(\xi)
+\equiv X^e\cdot\phi(\xi),
+\\[5pt]
+x_2(\xi_1,\xi_2) 
+= \sum_{a=1}^4 Y_a^e\phi_a(\xi)
+\equiv Y^e\cdot\phi(\xi).
+\end{aligned}\right.
+\end{align}
+```
+
+Observações:
+
+``\bullet``  ``X^e`` é um vetor com as abscissas do elemento finito quadrilátero ``\Omega^e``.
+
+``\bullet``  ``Y^e`` é um vetor com as ordenadas do elemento finito quadrilátero ``\Omega^e``.
+
+``\bullet``  ``\phi(\xi) = \Big[\phi_1(\xi),\phi_2(\xi),\phi_3(\xi),\phi_4(\xi)\Big]``.
+
+``\bullet``  ``\partial_{\xi_1}\phi(\xi) = \Big[\partial_{\xi_1}\phi_1(\xi),\partial_{\xi_1}\phi_2(\xi),\partial_{\xi_1}\phi_3(\xi),\partial_{\xi_1}\phi_4(\xi)\Big]``.
+
+``\bullet``  ``\partial_{\xi_2}\phi(\xi) = \Big[\partial_{\xi_2}\phi_1(\xi),\partial_{\xi_2}\phi_2(\xi),\partial_{\xi_2}\phi_3(\xi),\partial_{\xi_2}\phi_4(\xi)\Big]``.
+
+``\bullet``  A matriz Jacobiana da aplicação é dada por 
+```math
+M(\xi)
+=
+\begin{bmatrix} 
+\displaystyle \frac{\partial x_1}{\partial \xi_1}(\xi) 
+& 
+\displaystyle \frac{\partial x_1}{\partial \xi_2}(\xi)
+\\
+\displaystyle \frac{\partial x_2}{\partial \xi_1}(\xi) 
+&
+\displaystyle \frac{\partial x_2}{\partial \xi_2}(\xi)
+\end{bmatrix}
+\equiv
+\begin{bmatrix} 
+X^e\cdot \partial_{\xi_1}\phi(\xi) & X^e\cdot \partial_{\xi_2}\phi(\xi)
+\\[10pt]
+Y^e\cdot \partial_{\xi_1}\phi(\xi) & Y^e\cdot \partial_{\xi_2}\phi(\xi)
+\end{bmatrix}
+```
+
+``\bullet``  O determinante Jacobiano da aplicação é dado por 
+```math
+J(\xi) 
+= \det\Big(M(\xi,\eta)\Big) 
+\equiv 
+\frac{\partial x_1}{\partial \xi_1}(\xi)
+\frac{\partial x_2}{\partial \xi_2}(\xi)
+-
+\displaystyle \frac{\partial x_1}{\partial \xi_2}(\xi)
+\displaystyle \frac{\partial x_2}{\partial \xi_1}(\xi).
+```
+"""
+
+# ╔═╡ e9d8f33d-d586-40e4-8228-42f2dd81cfb5
+md"""
+``\bullet`` ``\displaystyle\nabla\varphi_a^e\big(x(\xi)\big)
+= \frac{1}{J(\xi)}H(\xi)*\nabla\phi_a(\xi)``, em que
+
+```math
+H(\xi)
+=
+\begin{bmatrix} 
+\displaystyle  \frac{\partial x_2}{\partial \xi_2}(\xi) 
+& 
+\displaystyle -\frac{\partial x_2}{\partial \xi_1}(\xi)
+\\
+\displaystyle -\frac{\partial x_1}{\partial \xi_2}(\xi) 
+&
+\displaystyle  \frac{\partial x_1}{\partial \xi_1}(\xi)
+\end{bmatrix}
+```
+"""
+
+# ╔═╡ a5bf28cb-e044-476d-8289-acd692706b10
+md"""
+Além disso, ``H(\xi)^T*H(\xi)`` é uma matriz simétrica dada por
+```math
+
+\begin{bmatrix}
+\phantom{-}\frac{\partial x_2}{\partial \xi_2} & -\frac{\partial x_1}{\partial \xi_2}
+\\[5pt]
+-\frac{\partial x_2}{\partial \xi_1} & \phantom{-}\frac{\partial x_1}{\partial \xi_1}
+\end{bmatrix}
+
+\hspace{-1mm}*\hspace{-1mm}
+
+\begin{bmatrix}
+\phantom{-}\frac{\partial x_2}{\partial \xi_2} &-\frac{\partial x_2}{\partial \xi_1}
+\\[5pt]
+-\frac{\partial x_1}{\partial \xi_2}& \phantom{-}\frac{\partial x_1}{\partial \xi_1}
+\end{bmatrix}
+
+\hspace{-1mm}=\hspace{-1mm}
+
+\begin{bmatrix} 
+(\frac{\partial x_2}{\partial \xi_2})^2 + (\frac{\partial x_1}{\partial \xi_2})^2
+&\hspace{-2mm} 
+-\frac{\partial x_2}{\partial \xi_2}\frac{\partial x_2}{\partial \xi_1}
+-\frac{\partial x_1}{\partial \xi_2}\frac{\partial x_1}{\partial \xi_1}
+\\[10pt]
+-\frac{\partial x_2}{\partial \xi_1}\frac{\partial x_2}{\partial \xi_2}
+-\frac{\partial x_1}{\partial \xi_1}\frac{\partial x_1}{\partial \xi_2}
+& \hspace{-2mm}
+(\frac{\partial x_2}{\partial \xi_1})^2 + (\frac{\partial x_1}{\partial \xi_1})^2
+\end{bmatrix}
+```
+"""
+
+# ╔═╡ a2607161-29cd-4ac2-9a2b-5436aa96fb06
+md"### Monta locais"
+
+# ╔═╡ 87147502-dd87-4951-be05-3c6ed2527cde
+md"#### Cálculo do vetor local ``F^e``"
+
+# ╔═╡ 01010ccc-5deb-4011-9806-21a937bcb7f5
+md"""
+```math
+\begin{align}
+F_a^e 
+=& \int_{\Omega^e}f(x)\varphi_a^e(x)d\Omega
+\\[5pt]
+=& \int_{\mathcal{R}}  f\big(x(\xi)\big)\varphi_a^e\big(x(\xi)\big)
+\left|J(\xi)\right| d\xi_1\,d\xi_2
+\\[5pt]
+=& \int_{\mathcal{R}}  f\big(x(\xi)\big) \phi_a(\xi)
+\Big|
+\frac{\partial x_1}{\partial\xi_1}(\xi)
+\frac{\partial x_2}{\partial\xi_2}(\xi)
+-
+\frac{\partial x_1}{\partial\xi_2}(\xi)
+\frac{\partial x_2}{\partial\xi_1}(\xi)
+\Big|
+d\xi_1\,d\xi_2.
+\end{align}
+```
+"""
+
+# ╔═╡ d71f5899-2396-481c-bd51-258000aaccf7
+@doc raw"""
+    monta_Fᵉ_quadrilatero!(Fᵉ::Vector{Float64}, f::Function,
+                           Xᵉ::Vector{Float64}, Yᵉ::Vector{Float64},
+                           P::Vector{Float64}, W::Vector{Float64})
+
+Na entrada `a` do vetor local `Fᵉ` é armazenado o valor aproximado da expressão 
+```math
+\int_{\mathcal{R}} f\Big(x_1(ξ_1,ξ_2),x_2(ξ_1,ξ_2)\Big)\phi_a(ξ_1,ξ_2)
+\Big(
+\frac{\partial x_1}{\partial\xi_1}(\xi_2)
+\frac{\partial x_2}{\partial\xi_2}(\xi_1)
+-
+\frac{\partial x_1}{\partial\xi_2}(\xi_1)
+\frac{\partial x_2}{\partial\xi_1}(\xi_2)
+\Big)
+dξ_1dξ_2
+``` 
+utilizando quadratura gaussiana.
+
+# Parâmetros
+- `Fᵉ::Vector{Float64}`: Vetor força local a ser modificado. Possui 4 entradas.
+- `f::Function`: Função ``f(x_1,x_2)`` fornecida como dado de entrada da EDP.
+- `Xᵉ::Vector{Float64}`: Abscissas do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `Yᵉ::Vector{Float64}`: Ordenadas do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `P::Vector{Float64}`: Pontos de quadratura no intervalo padrão `[-1, 1]`.
+- `W::Vector{Float64}`: Pesos de quadratura associados a `P`.
+"""
+function monta_Fᵉ_quadrilatero!(Fᵉ::Vector{Float64}, f::Function,
+                                Xᵉ::Vector{Float64}, Yᵉ::Vector{Float64},
+                                P::Vector{Float64}, W::Vector{Float64})
+    # Zera as entradas do vetor local Fᵉ
+    fill!(Fᵉ, 0.0)
+
+    # Integração via quadratura gaussiana dupla
+    for i in 1:length(P)          # Loop sobre os pontos de quadratura no eixo ξ₁
+        ξ₁ = P[i]
+
+        # Calcula as derivadas de ϕ em relação a ξ₂ no ponto (ξ₁,ξ₂)
+        # Obs.: As funções em ∂ϕ_∂ξ₂ dependem apenas de ξ₁
+        vec_∂ϕ_∂ξ₂ = ∂ϕ_∂ξ₂(ξ₁)
+        
+        for j in 1:length(P)      # Loop sobre os pontos de quadratura no eixo ξ₂
+            ξ₂ = P[j]
+
+            # Vetor com o valor em (ξ₁,ξ₂) das funções ϕ₁, ϕ₂, ϕ₃ e ϕ₄
+            vec_ϕ = ϕ(ξ₁,ξ₂)
+
+            # Calcula as derivadas de ϕ em relação a ξ₁ no ponto (ξ₁,ξ₂)
+            # Obs.: As funções em ∂ϕ_∂ξ₁ dependem apenas de ξ₂
+            vec_∂ϕ_∂ξ₁ = ∂ϕ_∂ξ₁(ξ₂)
+            
+            # Coordenadas físicas (x₁, x₂) mapeadas a partir de (ξ₁, ξ₂)
+            x₁ = dot(Xᵉ, vec_ϕ)
+            x₂ = dot(Yᵉ, vec_ϕ)
+
+            # Calcula o determinante jacobiano do mapeamento isoparamétrico
+            detJ = dot(Xᵉ, vec_∂ϕ_∂ξ₁) * dot(Yᵉ, vec_∂ϕ_∂ξ₂) - 
+                   dot(Xᵉ, vec_∂ϕ_∂ξ₂) * dot(Yᵉ, vec_∂ϕ_∂ξ₁)
+
+            # Calcula a contribuição de quadratura e acumula em Fᵉ
+            for a in 1:4
+                Fᵉ[a] += W[i] * W[j] * f(x₁, x₂) * vec_ϕ[a] * detJ
+            end
+        end
+    end
+end
+
+# ╔═╡ a7201500-7247-456f-8496-485064e49959
+function teste_monta_Fᵉ_quadrilatero()
+	Fᵉ = zeros(4)
+	
+	P, W = legendre(5)
+	
+	h₁ = 1/4
+	h₂ = 1/4
+	
+	Xᵉ = [0.0, h₁, h₁, 0.0]
+	Yᵉ = [0.0, 0.0, h₂, h₂]
+	
+	monta_Fᵉ_quadrilatero!(Fᵉ, (x₁,x₂)->4/(h₁*h₂), Xᵉ,Yᵉ, P,W)
+    display("Fᵉ - Teste 1")
+	display(Fᵉ)
+	
+	monta_Fᵉ_quadrilatero!(Fᵉ, (x₁,x₂)->(16*9*x₁*x₂)/((h₁*h₂)^2), Xᵉ,Yᵉ, P,W)
+    display("Fᵉ - Teste 2")
+	display(Fᵉ)
+end
+
+# ╔═╡ 1231b949-f351-4312-9059-4eff67bbff95
+teste_monta_Fᵉ_quadrilatero()
+
+# ╔═╡ c1568323-4f8d-41c1-8c53-3753ae35aa45
+md"#### Cálculo da matriz local ``K^e``"
+
+# ╔═╡ 8755cea1-5c5a-4c66-97f4-72630ad53678
+md"""
+```math
+\begin{align}
+K_{a,b}^e 
+=&
+ \alpha\int_{\Omega^e} 
+\frac{\partial\varphi_b^e}{\partial x_1}(x)
+\frac{\partial\varphi_a^e}{\partial x_1}(x)
+d\Omega
++\alpha\int_{\Omega^e} 
+\frac{\partial\varphi_b^e}{\partial x_2}(x)
+\frac{\partial\varphi_a^e}{\partial x_2}(x)
+d\Omega
++\beta \int_{\Omega^e} 
+\varphi_b^e(x)
+\varphi_a^e(x)
+d\Omega
+
+\\[20pt]
+= &
+\alpha \hspace{-1mm}
+\int_{\mathcal{R}} \hspace{-1mm}
+\nabla\phi_b(\xi)^T \hspace{-1mm} * 
+\Big[
+H(\xi)^T\hspace{-1mm}*H(\xi)
+\Big] *
+\nabla\phi_a(\xi)
+\frac{1}{\big|J(\xi)\big|}
+d\xi_1d\xi_2
++\beta \hspace{-1mm}
+\int_{\mathcal{R}} \hspace{-1mm}
+\phi_b(\xi)
+\phi_a(\xi)
+\big|J(\xi)\big|
+d\xi_1d\xi_2
+\end{align}
+```
+"""
+
+# ╔═╡ 3fbc6a63-a6f0-4624-8d34-37936e179656
+Foldable("Passo a passo",
+md"""
+``` math
+\begin{align}
+K_{a,b}^e 
+= &
+ \alpha\int_{\Omega^e} 
+\frac{\partial\varphi_b^e}{\partial x_1}(x)
+\frac{\partial\varphi_a^e}{\partial x_1}(x)
+d\Omega
++\alpha\int_{\Omega^e} 
+\frac{\partial\varphi_b^e}{\partial x_2}(x)
+\frac{\partial\varphi_a^e}{\partial x_2}(x)
+d\Omega
++\beta \int_{\Omega^e} 
+\varphi_b^e(x)
+\varphi_a^e(x)
+d\Omega
+
+\\[20pt]
+= &
+\int_{\Omega^e} \hspace{-1mm}
+\Big\{ 
+\alpha\,
+\nabla\varphi_b^e(x)^T *
+\nabla\varphi_a^e(x)
++\beta\,
+\varphi_b^e(x)
+\varphi_a^e(x)
+\Big\}
+d\Omega
+
+\\[20pt]
+= &
+\int_{\mathcal{R}} \hspace{-1mm}
+\Big\{
+\alpha\,
+\nabla\varphi_b^e\big(x(\xi)\big)^T *
+\nabla\varphi_a^e\big(x(\xi)\big)
++\beta\,
+\varphi_b^e\big(x(\xi)\big)
+\varphi_a^e\big(x(\xi)\big)
+\Big\}
+\big|J(\xi)\big|d\xi_1d\xi_2
+
+\\[20pt]
+= &
+\int_{\mathcal{R}} \hspace{-1mm}
+\Big\{
+\alpha
+\left[
+\frac{1}{J(\xi)}H(\xi)*\nabla\phi_b(\xi)
+\right]^T \hspace{-2mm}*
+\left[
+\frac{1}{J(\xi)}H(\xi)*\nabla\phi_a(\xi)
+\right]
++\beta\,
+\phi_b(\xi)
+\phi_a(\xi)
+\Big\}
+\big|J(\xi)\big|d\xi_1d\xi_2
+
+\\[20pt]
+= &
+\alpha \hspace{-1mm}
+\int_{\mathcal{R}} \hspace{-1mm}
+\nabla\phi_b(\xi)^T \hspace{-1mm} * 
+\Big[
+H(\xi)^T\hspace{-1mm}*H(\xi)
+\Big] *
+\nabla\phi_a(\xi)
+\frac{1}{\big|J(\xi)\big|}
+d\xi_1d\xi_2
++\beta \hspace{-1mm}
+\int_{\mathcal{R}} \hspace{-1mm}
+\phi_b(\xi)
+\phi_a(\xi)
+\big|J(\xi)\big|
+d\xi_1d\xi_2
+\end{align}
+```
+"""
+)
+
+# ╔═╡ 0d9e933e-5910-4b15-b91c-c2ff6a6eef8a
+@doc raw"""
+    monta_Kᵉ_quadrilatero!(Kᵉ::Matrix{Float64}, α::Float64, β::Float64, 
+                           Xᵉ::Vector{Float64}, Yᵉ::Vector{Float64}, 
+                           P::Vector{Float64}, W::Vector{Float64})
+
+Na entrada `[a,b]` da matriz local `Kᵉ` é armazenado o valor da expressão 
+
+# Parâmetros
+- `Kᵉ::Matrix{Float64}`: Matriz local a ser preenchida (modificada in-place).
+- `α::Float64`: Constante fornecida como dado de entrada da EDP.
+- `β::Float64`: Constante fornecida como dado de entrada da EDP.
+- `Xᵉ::Vector{Float64}`: Abscissas do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `Yᵉ::Vector{Float64}`: Ordenadas do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `P::Vector{Float64}`: Pontos de quadratura no intervalo padrão `[-1, 1]`.
+- `W::Vector{Float64}`: Pesos de quadratura associados a `P`.
+"""
+function monta_Kᵉ_quadrilatero!(Kᵉ::Matrix{Float64}, α::Float64, β::Float64, 
+                                Xᵉ::Vector{Float64}, Yᵉ::Vector{Float64}, 
+                                P::Vector{Float64}, W::Vector{Float64})
+    # Zera as entradas da matriz local Kᵉ
+    fill!(Kᵉ, 0.0)
+
+    # Loop de quadratura dupla (ξ₁, ξ₂) para integração gaussiana
+    for i in 1:length(P)  # Pontos de quadratura no eixo ξ₁
+        ξ₁ = P[i]
+
+        # Calcula as derivadas de ϕ em relação a ξ₂ no ponto (ξ₁,ξ₂)
+        # Obs.: As funções em ∂ϕ_∂ξ₂ dependem apenas de ξ₁
+        vec_∂ϕ_∂ξ₂ = ∂ϕ_∂ξ₂(ξ₁)
+
+        for j in 1:length(P)  # Pontos de quadratura no eixo ξ₂
+            ξ₂ = P[j]
+
+            # Vetor com o valor em (ξ₁,ξ₂) das funções ϕ₁, ϕ₂, ϕ₃ e ϕ₄
+            vec_ϕ = ϕ(ξ₁,ξ₂)
+			
+            # Calcula as derivadas de ϕ em relação a ξ₁ no ponto (ξ₁,ξ₂)
+            # Obs.: As funções em ∂ϕ_∂ξ₁ dependem apenas de ξ₂
+            vec_∂ϕ_∂ξ₁ = ∂ϕ_∂ξ₁(ξ₂)
+
+            # Calcula as entradas da matriz Jacobiana
+            ∂x₁_∂ξ₁ = dot(Xᵉ, vec_∂ϕ_∂ξ₁)
+            ∂x₁_∂ξ₂ = dot(Xᵉ, vec_∂ϕ_∂ξ₂)
+            ∂x₂_∂ξ₁ = dot(Yᵉ, vec_∂ϕ_∂ξ₁)
+            ∂x₂_∂ξ₂ = dot(Yᵉ, vec_∂ϕ_∂ξ₂)
+
+            # Calcula o determinante Jacobiano do mapeamento isoparamétrico
+            detJ = ∂x₁_∂ξ₁ * ∂x₂_∂ξ₂ - ∂x₁_∂ξ₂ * ∂x₂_∂ξ₁
+
+            # Calcula as entradas da matriz Hᵀ * H
+            HᵀH₁₁ = ∂x₂_∂ξ₂^2 + ∂x₁_∂ξ₂^2
+            HᵀH₁₂ = -∂x₁_∂ξ₁ * ∂x₁_∂ξ₂ - ∂x₂_∂ξ₁ * ∂x₂_∂ξ₂
+            HᵀH₂₂ = ∂x₂_∂ξ₁^2 + ∂x₁_∂ξ₁^2
+
+            # Calcula a contribuição de quadratura e acumula o valor na matriz Kᵉ
+            for b in 1:4
+                for a in 1:4
+                    Kᵉ[a, b] += W[i] * W[j] * (
+                        (α / detJ) * ( 
+							vec_∂ϕ_∂ξ₁[b] * 
+							(HᵀH₁₁ * vec_∂ϕ_∂ξ₁[a] + HᵀH₁₂ * vec_∂ϕ_∂ξ₂[a]) +
+                            vec_∂ϕ_∂ξ₂[b] * 
+							(HᵀH₁₂ * vec_∂ϕ_∂ξ₁[a] + HᵀH₂₂ * vec_∂ϕ_∂ξ₂[a])
+                        ) + β * vec_ϕ[b] * vec_ϕ[a] * detJ
+                    )
+                end
+            end
+        end
+    end
+end
+
+# ╔═╡ 23b73cbf-428d-498e-8edd-b8df09eacaaa
+function teste_monta_Kᵉ_quadrilatero()
+	h₁ = 1/4
+	h₂ = 1/4
+	
+	Xᵉ = [0.0, h₁, h₁, 0.0]
+	Yᵉ = [0.0, 0.0, h₂, h₂]
+
+	P, W = legendre(2)
+
+	Kᵉ = zeros(4,4)
+	
+	# Teste 1
+	α = 6.0
+	β = 0.0
+	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, Xᵉ, Yᵉ, P, W)
+	display("Kᵉ - Teste 1")
+	display(Kᵉ)
+
+	# Teste 2
+	α = 0.0
+	β = (9*4)/(h₁*h₂)
+	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, Xᵉ, Yᵉ, P, W)
+	display("Kᵉ - Teste 2")
+	display(Kᵉ)	
+end
+
+# ╔═╡ 6aa98255-9233-41bc-a103-2c6b6ba99779
+teste_monta_Kᵉ_quadrilatero()
+
+# ╔═╡ b1c042e6-2b8b-43ab-bb84-6d522bc36b06
+md"### Monta globais"
+
+# ╔═╡ 3edfd64c-460f-4c76-b320-1748c0a758a1
+md"#### Monta o vetor global ``F``"
+
+# ╔═╡ 168d171c-d470-4a39-bb62-9efc5976d9b0
+@doc raw"""
+    monta_F_quadrilatero(f::Function, X::Matrix{Float64}, Y::Matrix{Float64},
+                         m::Int64, EQoLG::Matrix{Int64}) -> Vector{Float64}
+
+Constrói o vetor global `F` de tamanho `m`, agregando os vetores locais `Fᵉ` associados a cada elemento finito na malha.
+
+# Parâmetros
+- `f::Function`: Função ``f(x_1,x_2)`` fornecida como dado de entrada da EDP.
+- `X::Matrix{Float64}`: Matriz 4 x ne com as abscissas dos vértices de cada ``\Omega^e``.
+- `Y::Matrix{Float64}`: Matriz 4 x ne com as ordenadas dos vértices de cada ``\Omega^e``.
+- `m::Int64`: Dimensão do espaço aproximado `Vₘ`.
+- `EQoLG::Matrix{Int64}`: EQ[LG].
+
+# Retorno
+- `F::Vector{Float64}`: Vetor global de tamanho `m`.
+"""
+function monta_F_quadrilatero(
+	f::Function, X::Matrix{Float64}, Y::Matrix{Float64}, 
+	m::Int64, EQoLG::Matrix{Int64}) :: Vector{Float64}
+    # Número total de elementos finitos na malha
+    ne = size(X)[2]
+
+    # P: Pontos de quadratura de Gauss-Legendre (ordem 5)
+    # W: Pesos de quadratura de Gauss-Legendre
+    P, W = legendre(5)
+
+    # Inicializa o vetor local Fᵉ
+    Fᵉ = zeros(4)
+
+    # Inicializa o vetor global F com tamanho (m+1)
+    F = zeros(m+1)
+    
+    # Loop sobre os elementos Ωᵉ (percorrendo cada subdivisão ao longo de x₂ e x₁)
+    for e in 1:ne
+        # Coordenadas dos vértices do elemento finito Ωᵉ
+        Xᵉ = X[:,e]
+        Yᵉ = Y[:,e]
+
+        # Monta o vetor local Fᵉ
+        monta_Fᵉ_quadrilatero!(Fᵉ, f, Xᵉ, Yᵉ, P, W)
+
+        # Adiciona a contribuição do elemento finito ao vetor global F
+        for a in 1:4
+            F[EQoLG[a,e]] += Fᵉ[a]
+        end
+    end 
+
+    # Retorna o vetor global F com tamanho `m`, excluindo a última entrada adicional
+    return F[1:m]
+end
+
+# ╔═╡ 349ee82a-0889-4456-86ee-f7ea5372c4c4
+function teste_monta_F_quadrilatero()
+    # Teste 1: Malha 4x3 e função constante
+    Nx1, Nx2 = 4, 3
+    h₁, h₂ = 1/Nx1, 1/Nx2
+
+    # Monta a estrutura da malha e conectores
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+    EQoLG = EQ[LG]
+
+	# Preenche as matrizes X e Y
+	X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
+	for e=1:Nx1*Nx2
+		X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
+		Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
+	end
+
+    # Calcula F com função constante f(x₁, x₂) = 4/(h₁*h₂)
+    F = monta_F_quadrilatero((x₁, x₂) -> 4.0 / (h₁ * h₂), X, Y, m, EQoLG)
+
+	# Exibe resultados do Teste 1
+    display("F - Teste 1")
+	display("Nx1 = 4; Nx2 = 3; h₁ = 1/Nx1; h₂ = 1/Nx2; f(x₁,x₂) = 4/(h₁*h₂);")
+	display(F)
+	
+    # Teste 2: Malha 4x4 e função variável em x₁ e x₂
+    Nx1, Nx2 = 4, 4
+    h₁, h₂ = 1/Nx1, 1/Nx2
+	
+    # Atualiza a estrutura da malha para o novo teste
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+    EQoLG = EQ[LG]
+	
+    # Preenche as matrizes X e Y para a nova malha
+	X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
+	for e=1:Nx1*Nx2
+		X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
+		Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
+	end
+
+    # Calcula F com função f(x₁, x₂) dependente de x₁ e x₂
+    F = monta_F_quadrilatero((x₁, x₂) -> (16 * 9 * x₁ * x₂) / (h₁ * h₂)^2, 
+		                     X, Y, m, EQoLG)
+
+    # Exibe resultados do Teste 2
+    display("F - Teste 2")
+	display("Nx1 = Nx2 = 4; h₁ = 1/Nx1; h₂ = 1/Nx2; f(x₁,x₂) = (16*9*x₁*x₂)/((h₁*h₂)^2);")
+	display(F)
+end
+
+# ╔═╡ 76405500-25dd-4ff6-be68-aa5f86ae71e6
+teste_monta_F_quadrilatero()
+
+# ╔═╡ 0c7eb736-b739-4970-9198-a4b0eafdbef7
+md"#### Monta a matriz global ``K``"
+
+# ╔═╡ f2d2dfaf-12b8-4634-b17f-4d464f13c67b
+@doc raw"""
+    monta_K_quadrilatero(α::Float64, β::Float64, 
+					     X::Matrix{Float64}, Y::Matrix{Float64}, 
+						 m::Int64, EQoLG::Matrix{Int64}) ->
+						 SparseMatrixCSC{Float64, Int64}
+
+Gera a matriz esparsa `K` de tamanho `m x m`, montada a partir das matrizes locais `Kᵉ`.
+
+# Parâmetros
+- `α::Float64`: Parâmetro fornecido como dado de entrada da EDP.
+- `β::Float64`: Parâmetro fornecido como dado de entrada da EDP.
+- `X::Matrix{Float64}`: Matriz 4 x ne com as abscissas dos vértices de cada ``\Omega^e``.
+- `Y::Matrix{Float64}`: Matriz 4 x ne com as ordenadas dos vértices de cada ``\Omega^e``.
+- `m::Int64`: Dimensão do espaço aproximado `Vₘ`.
+- `EQoLG::Matrix{Int64}`: ≡ EQ[LG].
+
+# Retorno
+- `K::SparseMatrixCSC{Float64, Int64}`: Matriz esparsa `K` de tamanho `m x m`.
+"""
+function monta_K_quadrilatero(α::Float64, β::Float64, 
+							  X::Matrix{Float64}, Y::Matrix{Float64},
+	                          m::Int64, EQoLG::Matrix{Int64}) :: 
+                              SparseMatrixCSC{Float64, Int64}
+    # Número de elementos na malha
+    ne = size(X, 2)
+
+    # Pontos e pesos de quadratura de Gauss-Legendre
+    P, W = legendre(2)
+
+    # Inicializa a matriz local Kᵉ
+    Kᵉ = zeros(4,4)
+	
+    # Inicializa a matriz esparsa K com tamanho (m+1) x (m+1)
+    K = spzeros(m+1, m+1)
+
+    # Loop sobre os elementos
+    for e = 1:ne
+	    # Calcula a matriz local Kᵉ
+    	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X[:,e], Y[:,e], P, W)
+        # Loop sobre as colunas (b) e linhas (a) da matriz local Kᵉ
+        for b = 1:4
+            j = EQoLG[b,e]
+            for a = 1:4
+                i = EQoLG[a,e]
+                K[i,j] += Kᵉ[a,b]
+            end
+        end
+    end
+   
+    # Remove a última linha e coluna da matriz K
+    return K[1:m, 1:m]
+end
+
+# ╔═╡ 95c4e028-12fe-4b5f-8a08-a6feba5ef87f
+function teste_monta_K_quadrilatero()
+	α, β = 1.0, 1.0
+    Nx1, Nx2 = 4, 3
+	h₁, h₂ = 1/Nx1, 1/Nx2
+
+	X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
+	for e=1:Nx1*Nx2
+		X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
+		Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
+	end
+	
+	m, EQ = monta_EQ(Nx1,Nx2)
+	LG = monta_LG(Nx1,Nx2)
+	EQoLG = EQ[LG]
+	
+	K = monta_K_quadrilatero(α, β, X, Y, m, EQoLG)
+
+	display("Parâmetros de entrada: α = 1.0; β = 1.0; Nx1 = 4; Nx2 = 3")
+	display(K)
+end
+
+# ╔═╡ a31bdbf9-c868-4357-9900-7704a907ec67
+teste_monta_K_quadrilatero()
+
+# ╔═╡ fff9f8c5-b715-46d3-816c-9290e02f3df2
+md"### Cálculo do erro"
+
+# ╔═╡ 35a2344a-557e-40fe-9d20-77e46892d619
+@doc raw"""
+    erro_norma_L2_quadrilatero(u::Function, c̄::Vector{Float64}, 
+                               X::Matrix{Float64}, Y::Matrix{Float64},
+                               EQoLG::Matrix{Int64}) -> Float64
+
+Calcula o erro na norma ``L^2(\Omega)`` entre a solução exata `u` e a solução aproximada representada pelos coeficientes `c̄` em uma malha de elementos finitos quadriláteros.
+
+# Parâmetros
+- `u::Function`: Função u(x₁,x₂) que representa a solução exata da EDP.
+- `c̄::Vector{Float64}`: Vetor com os coeficientes da solução aproximada acrescido de um zero, i.e., `c̄ = [c; 0]`.
+- `X::Matrix{Float64}`: Matriz 4 x ne com as abscissas dos vértices de cada ``\Omega^e``.
+- `Y::Matrix{Float64}`: Matriz 4 x ne com as ordenadas dos vértices de cada ``\Omega^e``.
+- `EQoLG::Matrix{Int}`: EQ[LG].
+
+# Retorna
+- `Float64`: O valor do erro na norma ``L^2(\Omega)`` entre a solução exata e aproximada, calculada pela integração em todos os elementos da malha utilizando quadratura de Gauss-Legendre.
+"""
+function erro_norma_L2_quadrilatero(u::Function, c̄::Vector{Float64}, 
+	                                X::Matrix{Float64}, Y::Matrix{Float64}, 
+	                                EQoLG::Matrix{Int64}) :: Float64
+    # Inicializa o erro
+    erro = 0.0
+
+    # Define o número de pontos de quadratura (Npg) e os pontos (P) e pesos (W)
+    Npg = 5
+    P, W = legendre(Npg)
+
+    # Número de elementos finitos na malha
+    ne = size(X, 2)
+
+    # Loop sobre os elementos Ωᵉ
+    for e = 1:ne
+        # Coordenadas dos vértices do elemento finito Ωᵉ
+        Xᵉ = X[:, e]
+        Yᵉ = Y[:, e]
+
+        # Obtém os coeficientes `c` da solução aproximada no elemento `e` 
+        ce = c̄[EQoLG[:, e]]
+
+        # Realiza a integração dupla usando quadratura de Gauss-Legendre
+        for i = 1:Npg
+            ξ₁ = P[i]
+
+            # Calcula as derivadas de ϕ em relação a ξ₂ no ponto (ξ₁,ξ₂)
+            # Obs.: As funções em ∂ϕ_∂ξ₂ dependem apenas de ξ₁
+            vec_∂ϕ_∂ξ₂ = ∂ϕ_∂ξ₂(ξ₁)
+
+            for j = 1:Npg
+                ξ₂ = P[j]
+
+                # Vetor com o valor em (ξ₁,ξ₂) das funções ϕ₁, ϕ₂, ϕ₃ e ϕ₄
+                vec_ϕ = ϕ(ξ₁,ξ₂)
+
+                # Coordenadas físicas (x₁, x₂) mapeadas a partir de (ξ₁, ξ₂)
+                x₁ = dot(Xᵉ, vec_ϕ)
+                x₂ = dot(Yᵉ, vec_ϕ)
+                
+                # Calcula as derivadas de ϕ em relação a ξ₁ no ponto (ξ₁,ξ₂)
+                # Obs.: As funções em ∂ϕ_∂ξ₁ dependem apenas de ξ₂
+                vec_∂ϕ_∂ξ₁ = ∂ϕ_∂ξ₁(ξ₂)
+
+                # Calcula as entradas da matriz Jacobiana
+                ∂x₁_∂ξ₁ = dot(Xᵉ, vec_∂ϕ_∂ξ₁)
+                ∂x₁_∂ξ₂ = dot(Xᵉ, vec_∂ϕ_∂ξ₂)
+                ∂x₂_∂ξ₁ = dot(Yᵉ, vec_∂ϕ_∂ξ₁)
+                ∂x₂_∂ξ₂ = dot(Yᵉ, vec_∂ϕ_∂ξ₂)
+
+                # Calcula o determinante Jacobiano do mapeamento isoparamétrico
+                detJ = ∂x₁_∂ξ₁ * ∂x₂_∂ξ₂ - ∂x₁_∂ξ₂ * ∂x₂_∂ξ₁
+
+                # Acumula a contribuição da quadratura
+                erro += W[i] * W[j] * ( u(x₁, x₂) - dot(ce, vec_ϕ) )^2 * detJ
+            end
+        end  
+    end
+
+    return sqrt(erro)
+end
+
+# ╔═╡ e112ce03-5627-4ef3-aa38-beb5d6025a75
+md"### Simulações numéricas"
+
+# ╔═╡ 19adcc25-7816-494e-a30a-e4635cd188ca
+md"#### Solução aproximada vs solução exata"
+
+# ╔═╡ 44a17c38-4b0a-4501-b616-b926cf4a332a
+function solução_aproximada_vs_exata_quadrilatero()
+    # Carrega os parâmetros de entrada da EDP
+    α, β, f, u = exemplo1()
+	
+    # Define o número de subdivisões ao longo dos eixos x₁ e x₂
+    Nx1 = 4
+    Nx2 = 4
+
+    # Exibe os parâmetros de entrada
+    println("Parâmetros de entrada:")
+    println("Exemplo 1 & Nx1 = $Nx1, Nx2 = $Nx2")
+    
+    # Define o comprimento da base (h₁) e altura (h₂) de cada elemento retangular Ωᵉ
+    h₁ = 1/Nx1
+    h₂ = 1/Nx2
+
+	# Gera X, Y
+	X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
+	for e=1:Nx1*Nx2
+		X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
+		Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
+	end
+	
+    # Gera a matriz de conectividade local/global (LG)
+    LG = monta_LG(Nx1, Nx2)
+
+    # Gera o valor de `m` e o vetor `EQ`
+    m, EQ = monta_EQ(Nx1, Nx2)
+
+    # Define a matriz de conectividade EQoLG
+    EQoLG = EQ[LG]
+
+    # Monta a matriz esparsa `K`
+    K = monta_K_quadrilatero(α, β, X, Y, m, EQoLG)
+
+    # Monta o vetor global `F`
+    F = monta_F_quadrilatero(f, X, Y, m, EQoLG)
+
+    # Resolve o sistema linear Kc = F
+    c = K \ F
+
+    # Calcula a solução exata nos nós internos da malha
+    c_exato = [u(x₁,x₂) for x₂ in h₂:h₂:1-h₂, x₁ in h₁:h₁:1-h₁]
+    
+    # Exibe a solução aproximada (vetor c) e a solução exata (vetor c_exato)
+    println("Solução aproximada:")
+    println(c)
+    println("Solução exata:")
+    println(c_exato)
+
+	# # Discretização no eixo x₁
+	# X = 0:0.01:1
+	
+	# plt = plot_solução_aproximada([c;0], Nx1, Nx2, EQoLG)
+	# plot(
+	# plot(X,X,(x₁, x₂) -> u(x₁, x₂),
+	# 	title="Solução Exata",
+	# 	seriestype = :surface, colorbar=false, color=:viridis, 
+	# 	xticks=[0, 0.5, 1],yticks=[0, 0.5, 1],zticks=[0, 1]),
+	# plt,
+	# layout=(1, 2))
+end
+
+# ╔═╡ b7bc093d-575d-4bca-b98e-1c860b6e4445
+solução_aproximada_vs_exata_quadrilatero()
+
+# ╔═╡ 0de8bb9c-6292-46d2-baef-d3194750717c
+md"#### Estudo da convergência do erro"
+
+# ╔═╡ 3ec31011-c972-4ca0-8154-917851a128ee
+function estudo_do_erro_quadrilatero()
+	# Carrega os dados de entrada da EDP
+    α, β, f, u = exemplo1()
+
+    # Define os valores para Nx1 (subdivisões em x₁) e Nx2 (subdivisões em x₂)
+    vec_Nx1 = [2^i for i in 2:8]
+    vec_Nx2 = vec_Nx1
+
+    # Calcula os valores de `h` para cada combinação de vec_Nx1[i] e vec_Nx2[i]
+    vec_h = sqrt.( (1 ./ vec_Nx1).^2 + (1 ./ vec_Nx2).^2 )
+
+    # Inicializa o vetor para armazenar os erros da norma L2
+    vec_erro = zeros(length(vec_Nx1))
+
+    # Loop sobre os valores de Nx1 e Nx2
+    for i = 1:length(vec_Nx1)
+        Nx1 = vec_Nx1[i]
+        Nx2 = vec_Nx2[i]
+		h₁, h₂ = 1/Nx1, 1/Nx2
+
+		# Gera X, Y
+		X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
+		for e=1:Nx1*Nx2
+			X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
+			Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
+		end
+
+        # Gera a matriz de conectividade local/global (LG)
+        LG = monta_LG(Nx1, Nx2)
+
+        # Gera o valor de `m` e o vetor `EQ`
+        m, EQ = monta_EQ(Nx1, Nx2)
+
+        # Define a matriz de conectividade EQoLG
+        EQoLG = EQ[LG]
+
+        # Monta a matriz esparsa `K`
+        K = monta_K_quadrilatero(α, β, X, Y, m, EQoLG)
+
+        # Monta o vetor global `F`
+        F = monta_F_quadrilatero(f, X, Y, m, EQoLG)
+
+        # Resolve o sistema linear Kc = F
+        c = K \ F
+
+        # Calcula o erro na norma L2 entre a solução exata `u` e a solução aproximada
+        vec_erro[i] = erro_norma_L2_quadrilatero(u, [c;0], X, Y, EQoLG)
+    end
+
+    return vec_h, vec_erro
+end
+
+# ╔═╡ da417534-ce5e-4f99-b286-29fbb4ad8899
+function plot_estudo_do_erro_quadrilatero()
+	# Realiza o estudo do erro e mede o tempo de execução
+	@time begin
+		vec_h, vec_erro = estudo_do_erro_quadrilatero()
+	end
+
+    # Cria o gráfico do erro na norma L2 em função de h, diâmetro de cada Ωᵉ
+    plt = plot(
+        vec_h, vec_erro, lw=3, linestyle=:solid, markershape=:circle,
+        label="Erro", title="Estudo do erro - elemento finito quadrilátero",
+        xscale=:log10, yscale=:log10, legend=:topleft
+    )
+
+    # Adiciona a curva teórica de h² ao gráfico
+    plot!(plt, vec_h, vec_h.^2, lw=3, linestyle=:solid, label="h²")
+
+    # Adiciona rótulos aos eixos
+    xlabel!("h")
+    ylabel!("Erro")
+
+    # Exibe uma tabela com os valores de h e erro
+    display("Tabela com os valores de h e erro:")
+    display(DataFrame(h=vec_h, erro=vec_erro))
+
+	# Retorna o gráfico 
+	return plt
+end
+
+# ╔═╡ d1c5f722-5251-4d46-a1e0-03a9bfe9857b
+plot_estudo_do_erro_quadrilatero()
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 GaussQuadrature = "d54b0c1a-921d-58e0-8e36-89d8069c0969"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
@@ -1788,7 +2759,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.1"
 manifest_format = "2.0"
-project_hash = "fc3697737abd1c988288e55a0645347e4483b4bb"
+project_hash = "c527844ee69c89f35166b052f50fd926e3842ad6"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -3123,13 +4094,20 @@ version = "1.4.1+1"
 # ╟─738c986b-e524-4cc1-a6f8-ff5650861a55
 # ╟─93547f8d-e0f4-415f-abbe-800e52349746
 # ╟─49c12023-3b0e-4246-9d28-33ebbbbbe0df
+# ╟─760f8dfb-866a-4b66-827f-f0a2536923af
 # ╟─26f290b8-ce09-44d8-8d60-aad4fa04367a
+# ╟─4de89aa8-a3b2-41e4-a36f-b3047eee05b3
 # ╟─6f269a14-472a-4cd3-b5a3-99a61d9a3f23
+# ╟─770cc3e6-6902-4b85-a8d6-9ce7e8e9fc66
 # ╟─417b8cd2-bcda-4354-9e8d-d9c2492f8d7a
 # ╟─e1df5449-2dc0-44da-883c-05cefaa286d2
 # ╟─61fccc23-8111-42ec-9fe0-2e3d4ef993b3
 # ╟─f6cfbb5a-933b-48da-a488-0e21972ca15d
 # ╟─8c7c8177-b8e8-4257-82b1-ba2125dc4d4a
+# ╟─1b7efd80-b78d-47a0-afe6-a4154979f018
+# ╟─f888cec3-be68-42e5-890f-e2b3082430aa
+# ╟─6d71c7b7-4835-4709-bb72-34afc1dde92a
+# ╟─66cd54c0-c1ad-4da7-ba6c-dfcc42f78ea4
 # ╟─2450b17f-982b-4af8-bb68-7cca4f1944d6
 # ╟─2f8e0a58-3476-4c04-aebe-4dec4f0f1db8
 # ╟─0f85f3a1-beaa-4321-abb2-c671e75d0b15
@@ -3180,5 +4158,41 @@ version = "1.4.1+1"
 # ╟─b766d178-ce59-4055-bd43-035b66e43920
 # ╟─a173a245-a285-47a6-8ed6-8c3b540ed440
 # ╟─08ccecca-f127-4adb-bd0e-0fdb2979b62a
+# ╟─0351f91e-0ff0-4278-8662-21337048f137
+# ╟─02e87aa0-31bc-4682-83d1-8c780916a8a6
+# ╟─b5d52f2c-4f5e-4a0b-9213-3ddb7b127037
+# ╟─e9d8f33d-d586-40e4-8228-42f2dd81cfb5
+# ╟─a5bf28cb-e044-476d-8289-acd692706b10
+# ╟─a2607161-29cd-4ac2-9a2b-5436aa96fb06
+# ╟─87147502-dd87-4951-be05-3c6ed2527cde
+# ╟─01010ccc-5deb-4011-9806-21a937bcb7f5
+# ╟─d71f5899-2396-481c-bd51-258000aaccf7
+# ╟─a7201500-7247-456f-8496-485064e49959
+# ╟─1231b949-f351-4312-9059-4eff67bbff95
+# ╟─c1568323-4f8d-41c1-8c53-3753ae35aa45
+# ╟─8755cea1-5c5a-4c66-97f4-72630ad53678
+# ╟─3fbc6a63-a6f0-4624-8d34-37936e179656
+# ╟─0d9e933e-5910-4b15-b91c-c2ff6a6eef8a
+# ╟─23b73cbf-428d-498e-8edd-b8df09eacaaa
+# ╟─6aa98255-9233-41bc-a103-2c6b6ba99779
+# ╟─b1c042e6-2b8b-43ab-bb84-6d522bc36b06
+# ╟─3edfd64c-460f-4c76-b320-1748c0a758a1
+# ╟─168d171c-d470-4a39-bb62-9efc5976d9b0
+# ╟─349ee82a-0889-4456-86ee-f7ea5372c4c4
+# ╟─76405500-25dd-4ff6-be68-aa5f86ae71e6
+# ╟─0c7eb736-b739-4970-9198-a4b0eafdbef7
+# ╟─f2d2dfaf-12b8-4634-b17f-4d464f13c67b
+# ╟─95c4e028-12fe-4b5f-8a08-a6feba5ef87f
+# ╟─a31bdbf9-c868-4357-9900-7704a907ec67
+# ╟─fff9f8c5-b715-46d3-816c-9290e02f3df2
+# ╟─35a2344a-557e-40fe-9d20-77e46892d619
+# ╟─e112ce03-5627-4ef3-aa38-beb5d6025a75
+# ╟─19adcc25-7816-494e-a30a-e4635cd188ca
+# ╟─44a17c38-4b0a-4501-b616-b926cf4a332a
+# ╟─b7bc093d-575d-4bca-b98e-1c860b6e4445
+# ╟─0de8bb9c-6292-46d2-baef-d3194750717c
+# ╟─3ec31011-c972-4ca0-8154-917851a128ee
+# ╟─da417534-ce5e-4f99-b286-29fbb4ad8899
+# ╟─d1c5f722-5251-4d46-a1e0-03a9bfe9857b
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
