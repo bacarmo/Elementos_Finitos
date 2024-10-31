@@ -408,14 +408,17 @@ function plot_base()
 	ξ₂ = -1:2/N₂:1
 	
 	# Gráficos das superfícies correspondentes às funções base ϕ₁, ϕ₂, ϕ₃ e ϕ₄
-	plots = [plot(ξ₁, ξ₂, (ξ₁, ξ₂) -> ϕ(ξ₁, ξ₂, a), seriestype=:surface,
-	              title=L"\phi_%$a", xlabel="ξ₁", ylabel="ξ₂", 
-	              xticks=[-1, 0, 1], yticks=[-1, 0, 1], zticks=[0, 1],  # Definir ticks dos eixos
-	              colorbar=false, color=:viridis)  # Personalizar cor da superfície (color=:diverging_bwr_55_98_c37_n256; color=:Purples_5)
+	plots = [Plots.plot(ξ₁, ξ₂, (ξ₁, ξ₂) -> ϕ(ξ₁, ξ₂, a), seriestype=:surface,
+	        title=L"\phi_%$a", xlabel="ξ₁", ylabel="ξ₂", 
+	        xticks=[-1, 0, 1], yticks=[-1, 0, 1], zticks=[0, 1],# ticks dos eixos
+	        colorbar=false, color=:viridis)  
 	         for a in 1:4]  # Iterar para cada função base ϕ
+	# Exemplos para personalizar cor da superfície:
+	# color=:diverging_bwr_55_98_c37_n256
+	# color=:Purples_5
 	
 	# Exibir os 4 gráficos lado a lado, organizados em uma única linha
-	plot(plots[1],plots[2],plots[3],plots[4], layout=(1, 4), size=(1200, 300))
+	Plots.plot(plots[1],plots[2],plots[3],plots[4], layout=(1, 4), size=(1200, 300))
 end
   ╠═╡ =#
 
@@ -750,7 +753,8 @@ F_a^e
 
 # ╔═╡ 3661a97c-6d06-41d0-b7df-71a8c1f70adc
 @doc raw"""
-    monta_Fᵉ!(Fᵉ::Vector{Float64}, f::Function, h₁::Float64, h₂::Float64, p₁::Float64, p₂::Float64, P::Vector{Float64}, W::Vector{Float64})
+    monta_Fᵉ!(Fᵉ::Vector{Float64}, f::Function, h₁::Float64, h₂::Float64, 
+              p₁::Float64, p₂::Float64, P::Vector{Float64}, W::Vector{Float64})
 
 Na entrada `a` do vetor local `Fᵉ` é armazenado o valor aproximado da expressão 
 ```math
@@ -999,7 +1003,8 @@ d\xi_1\,d\xi_2.
 
 # ╔═╡ 90787447-7ddf-41dc-9b76-3261f4168e5e
 @doc raw"""
-    monta_Kᵉ(α::Float64, β::Float64, h₁::Float64, h₂::Float64, P::Vector{Float64}, W::Vector{Float64}) -> Matrix{Float64}
+    monta_Kᵉ(α::Float64, β::Float64, h₁::Float64, h₂::Float64, 
+             P::Vector{Float64}, W::Vector{Float64}) -> Matrix{Float64}
 
 Na entrada `[a,b]` da matriz local `Kᵉ` é armazenado o valor da expressão 
 ```math
@@ -1364,7 +1369,8 @@ md"#### Monta o vetor global ``F``"
 
 # ╔═╡ 38e32ff9-a9c2-4018-b69b-8442563aa133
 """
-    monta_F(f::Function, Nx1::Int64, Nx2::Int64, m::Int64, EQoLG::Matrix{Int64}) -> Vector{Float64}
+    monta_F(f::Function, Nx1::Int64, Nx2::Int64, 
+            m::Int64, EQoLG::Matrix{Int64}) -> Vector{Float64}
 
 Constrói o vetor global `F` de tamanho `m`, agregando os vetores locais `Fᵉ` associados a cada elemento finito na malha.
 
@@ -1455,7 +1461,8 @@ md"#### Monta a matriz global ``K``"
 
 # ╔═╡ 14427308-9ef8-46e8-b53d-7c1deb5d4226
 """
-    monta_K(α::Float64, β::Float64, Nx1::Int64, Nx2::Int64, m::Int64, EQoLG::Matrix{Int64}) -> SparseMatrixCSC{Float64, Int64}
+    monta_K(α::Float64, β::Float64, Nx1::Int64, Nx2::Int64, 
+            m::Int64, EQoLG::Matrix{Int64}) -> SparseMatrixCSC{Float64, Int64}
 
 Gera a matriz esparsa `K` de tamanho `m x m`, montada a partir das matrizes locais `Kᵉ`.
 
@@ -1550,7 +1557,8 @@ Denotando por ``\bar{c}=[c;0]`` o vetor de coeficientes da solução aproximada 
 
 # ╔═╡ 29097174-9c4e-4a47-afad-66a07c088e70
 @doc raw"""
-    erro_norma_L2(u::Function, c̄::Vector{Float64}, Nx1::Int64, Nx2::Int64, EQoLG::Matrix{Int64}) -> Float64
+    erro_norma_L2(u::Function, c̄::Vector{Float64}, Nx1::Int64, Nx2::Int64,
+                  EQoLG::Matrix{Int64}) -> Float64
 
 Calcula o erro na norma ``L^2(\Omega)`` entre a solução exata `u` e a solução aproximada representada pelos coeficientes `c̄` em uma malha de elementos finitos retangulares.
 
@@ -1623,49 +1631,55 @@ md"### Simulações numéricas"
 md"#### Solução aproximada vs solução exata"
 
 # ╔═╡ de6cac6c-1f5c-4c44-9e1d-78c6712d3d45
-function plot_solução_aproximada(c̄::Vector{Float64}, Nx1::Int64, Nx2::Int64, EQoLG::Matrix{Int64})
+function plot_solução_aproximada(c̄::Vector{Float64}, 
+	                             Nx1::Int64, Nx2::Int64, EQoLG::Matrix{Int64})
     # Comprimentos da base (h₁) e altura (h₂) de cada elemento retangular Ωᵉ
-    h₁ = 1 / Nx1
-    h₂ = 1 / Nx2
+    h₁, h₂ = 1 / Nx1, 1 / Nx2
 
     # Define uma discretização do intervalo de referência [-1, 1] nos eixos ξ₁ e ξ₂
-    P = collect(-1:0.1:1)
+    ξ₁ = collect(-1:0.1:1) 
+	ξ₂ = collect(-1:0.1:1) 
 
     # Inicializa um objeto de gráfico que acumulará as superfícies
-    plt = plot(seriestype = :surface, title="Solução Aproximada")
+    plt = Plots.plot(seriestype = :surface, title="Solução Aproximada",
+		       color=:viridis,
+               xlabel="x₁", ylabel="x₂", colorbar=false, zlims=(0,1),
+               xticks=[0, 0.5, 1], yticks=[0, 0.5, 1], zticks=[0, 1])
 	
     # Loop nos elementos da malha (percorrendo cada subdivisão ao longo de x₂ e x₁)
     for j = 1:Nx2
         # Define a segunda coordenada do ponto inferior esquerdo do retângulo `Ωᵉ`.
         p₂ = (j - 1) * h₂
-        # Calcula os valores correspondentes no eixo x₂ para os pontos P no eixo ξ₂
-        x₂ = x₂_de_ξ.(P, h₂, p₂)
+        # Calcula os valores correspondentes no eixo x₂ para os pontos ξ₂ em [-1,1]
+        x₂ = x₂_de_ξ.(ξ₂, h₂, p₂)
 
         for i = 1:Nx1
             # Primeira coordenada do ponto inferior esquerdo do retângulo `Ωᵉ`.
             p₁ = (i - 1) * h₁
-            # Valores correspondentes no eixo x₁ para os pontos P no eixo ξ₁
-            x₁ = x₁_de_ξ.(P, h₁, p₁)
+            # Valores correspondentes no eixo x₁ para os pontos ξ₁ em [-1,1]
+            x₁ = x₁_de_ξ.(ξ₁, h₁, p₁)
 
             # Determina a numeração do elemento finito atual (`e`) na malha
             e = (j - 1) * Nx1 + i
 
             # Obtém os coeficientes `c` da solução aproximada no elemento `e`
-            c1e = c̄[EQoLG[1, e]]
-            c2e = c̄[EQoLG[2, e]]
-            c3e = c̄[EQoLG[3, e]]
-            c4e = c̄[EQoLG[4, e]]
+            ce = c̄[EQoLG[:, e]]
 
+			# Solução aproximada na malha x₁ × x₂. Tamanho length(x₂) x length(x₁)
+			mat = [dot(ce,ϕ(ξ₁[a],ξ₂[b])) for b in 1:length(x₂), a in 1:length(x₁)]
+
+			# Exibindo os resultados
+			# display("------------------------------")
+			# display("e = $e")
+			# display("p1, p2 = $p₁, $p₂")
+			# display("ce = $ce")
+			# display("x₁ = $x₁")
+			# display("x₂ = $x₂")
+			# display("uₕ(x₁[a],x₂[b]) for b in 1:length(x₂), a in 1:length(x₁)")
+			# display(mat)
+			
             # Gera o gráfico da solução aproximada sobre o elemento `e`
-            plot!(plt, x₁, x₂, (x₁, x₂) -> 
-				  c1e*ϕ(x₁,x₂,1) 
-				+ c2e*ϕ(x₁,x₂,2) 
-				+ c3e*ϕ(x₁, x₂, 3) 
-				+ c4e * ϕ(x₁, x₂, 4),
-                seriestype = :surface, colorbar=false, color=:viridis,
-				xticks=[0, 0.5, 1],yticks=[0, 0.5, 1],zticks=[0, 1],
-				zlims=(0,1)
-            )
+            Plots.plot!(plt, x₁, x₂, mat, seriestype = :surface, alpha=0.5)
         end
     end
 
@@ -1678,8 +1692,8 @@ function solução_aproximada_vs_exata()
     α, β, f, u = exemplo1()
 	
     # Define o número de subdivisões ao longo dos eixos x₁ e x₂
-    Nx1 = 4
-    Nx2 = 4
+    Nx1 = 8
+    Nx2 = 8
 
     # Exibe os parâmetros de entrada
     println("Parâmetros de entrada:")
@@ -1716,17 +1730,18 @@ function solução_aproximada_vs_exata()
     println("Solução exata:")
     println(c_exato)
 
-	# # Discretização no eixo x₁
-	# X = 0:0.01:1
+	# Discretização no eixo x₁
+	X = 0:0.01:1
 	
-	# plt = plot_solução_aproximada([c;0], Nx1, Nx2, EQoLG)
-	# plot(
-	# plot(X,X,(x₁, x₂) -> u(x₁, x₂),
-	# 	title="Solução Exata",
-	# 	seriestype = :surface, colorbar=false, color=:viridis, 
-	# 	xticks=[0, 0.5, 1],yticks=[0, 0.5, 1],zticks=[0, 1]),
-	# plt,
-	# layout=(1, 2))
+	plt = plot_solução_aproximada([c;0], Nx1, Nx2, EQoLG)
+	Plots.plot(
+	Plots.plot(X,X,(x₁, x₂) -> u(x₁, x₂),
+		title="Solução Exata",
+		seriestype = :surface, colorbar=false, color=:viridis, 
+		xticks=[0, 0.5, 1],yticks=[0, 0.5, 1],zticks=[0, 1],
+		xlabel="x₁",ylabel="x₂"),
+	plt,
+	layout=(1, 2))
 end
 
 # ╔═╡ 13fa4b92-ce6a-4c9f-bb88-6b91024cff4b
@@ -1788,18 +1803,18 @@ function plot_estudo_do_erro()
 	end
 
     # Cria o gráfico do erro na norma L2 em função de h, diâmetro de cada Ωᵉ
-    plt = plot(
+    plt = Plots.plot(
         vec_h, vec_erro, lw=3, linestyle=:solid, markershape=:circle,
         label="Erro", title="Estudo do erro",
         xscale=:log10, yscale=:log10, legend=:topleft
     )
 
     # Adiciona a curva teórica de h² ao gráfico
-    plot!(plt, vec_h, vec_h.^2, lw=3, linestyle=:solid, label="h²")
+    Plots.plot!(plt, vec_h, vec_h.^2, lw=3, linestyle=:solid, label="h²")
 
     # Adiciona rótulos aos eixos
-    xlabel!("h")
-    ylabel!("Erro")
+    Plots.xlabel!("h")
+    Plots.ylabel!("Erro")
 
     # Exibe uma tabela com os valores de h e erro
     display("Tabela com os valores de h e erro:")
@@ -1843,9 +1858,9 @@ x_2(\xi_1,\xi_2)
 
 Observações:
 
-``\bullet``  ``X^e`` é um vetor com as abscissas do elemento finito quadrilátero ``\Omega^e``.
+``\bullet``  ``X^e`` é um vetor com as abscissas dos vértices do elemento finito quadrilátero ``\Omega^e``.
 
-``\bullet``  ``Y^e`` é um vetor com as ordenadas do elemento finito quadrilátero ``\Omega^e``.
+``\bullet``  ``Y^e`` é um vetor com as ordenadas dos vértices do elemento finito quadrilátero ``\Omega^e``.
 
 ``\bullet``  ``\phi(\xi) = \Big[\phi_1(\xi),\phi_2(\xi),\phi_3(\xi),\phi_4(\xi)\Big]``.
 
@@ -1877,7 +1892,7 @@ Y^e\cdot \partial_{\xi_1}\phi(\xi) & Y^e\cdot \partial_{\xi_2}\phi(\xi)
 ``\bullet``  O determinante Jacobiano da aplicação é dado por 
 ```math
 J(\xi) 
-= \det\Big(M(\xi,\eta)\Big) 
+= \det\Big(M(\xi)\Big) 
 \equiv 
 \frac{\partial x_1}{\partial \xi_1}(\xi)
 \frac{\partial x_2}{\partial \xi_2}(\xi)
@@ -1913,30 +1928,46 @@ Além disso, ``H(\xi)^T*H(\xi)`` é uma matriz simétrica dada por
 ```math
 
 \begin{bmatrix}
-\phantom{-}\frac{\partial x_2}{\partial \xi_2} & -\frac{\partial x_1}{\partial \xi_2}
+\displaystyle
+\phantom{-}\frac{\partial x_2}{\partial \xi_2} & \hspace{-1.5mm}
+\displaystyle
+-\frac{\partial x_1}{\partial \xi_2}
 \\[5pt]
--\frac{\partial x_2}{\partial \xi_1} & \phantom{-}\frac{\partial x_1}{\partial \xi_1}
+\displaystyle
+-\frac{\partial x_2}{\partial \xi_1} & \hspace{-1.5mm}
+\displaystyle
+\phantom{-}\frac{\partial x_1}{\partial \xi_1}
 \end{bmatrix}
 
 \hspace{-1mm}*\hspace{-1mm}
 
 \begin{bmatrix}
-\phantom{-}\frac{\partial x_2}{\partial \xi_2} &-\frac{\partial x_2}{\partial \xi_1}
+\displaystyle
+\phantom{-}\frac{\partial x_2}{\partial \xi_2} &\hspace{-1mm}
+\displaystyle
+-\frac{\partial x_2}{\partial \xi_1}
 \\[5pt]
--\frac{\partial x_1}{\partial \xi_2}& \phantom{-}\frac{\partial x_1}{\partial \xi_1}
+\displaystyle
+-\frac{\partial x_1}{\partial \xi_2}&\hspace{-1mm}
+\displaystyle
+\phantom{-}\frac{\partial x_1}{\partial \xi_1}
 \end{bmatrix}
 
 \hspace{-1mm}=\hspace{-1mm}
 
 \begin{bmatrix} 
+\displaystyle
 (\frac{\partial x_2}{\partial \xi_2})^2 + (\frac{\partial x_1}{\partial \xi_2})^2
-&\hspace{-2mm} 
+&\hspace{-4mm}
+\displaystyle
 -\frac{\partial x_2}{\partial \xi_2}\frac{\partial x_2}{\partial \xi_1}
 -\frac{\partial x_1}{\partial \xi_2}\frac{\partial x_1}{\partial \xi_1}
 \\[10pt]
+\displaystyle
 -\frac{\partial x_2}{\partial \xi_1}\frac{\partial x_2}{\partial \xi_2}
 -\frac{\partial x_1}{\partial \xi_1}\frac{\partial x_1}{\partial \xi_2}
-& \hspace{-2mm}
+& \hspace{-4mm}
+\displaystyle
 (\frac{\partial x_2}{\partial \xi_1})^2 + (\frac{\partial x_1}{\partial \xi_1})^2
 \end{bmatrix}
 ```
@@ -1994,8 +2025,8 @@ utilizando quadratura gaussiana.
 # Parâmetros
 - `Fᵉ::Vector{Float64}`: Vetor força local a ser modificado. Possui 4 entradas.
 - `f::Function`: Função ``f(x_1,x_2)`` fornecida como dado de entrada da EDP.
-- `Xᵉ::Vector{Float64}`: Abscissas do quadrilátero ``\Omega^e``. Possui 4 entradas.
-- `Yᵉ::Vector{Float64}`: Ordenadas do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `Xᵉ::Vector{Float64}`: Abscissas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `Yᵉ::Vector{Float64}`: Ordenadas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
 - `P::Vector{Float64}`: Pontos de quadratura no intervalo padrão `[-1, 1]`.
 - `W::Vector{Float64}`: Pesos de quadratura associados a `P`.
 """
@@ -2057,6 +2088,15 @@ function teste_monta_Fᵉ_quadrilatero()
 	
 	monta_Fᵉ_quadrilatero!(Fᵉ, (x₁,x₂)->(16*9*x₁*x₂)/((h₁*h₂)^2), Xᵉ,Yᵉ, P,W)
     display("Fᵉ - Teste 2")
+	display(Fᵉ)
+
+	display("Fᵉ - Teste 3")
+	Xᵉ = [0.0, 2.0, 3.0, 1.0]
+	Yᵉ = [0.0, 0.0, 1.0, 1.0]
+	display("Xᵉ = $Xᵉ")
+	display("Yᵉ = $Yᵉ")
+	display("f(x₁,x₂) = x₁ + x₂")
+	monta_Fᵉ_quadrilatero!(Fᵉ, (x₁,x₂)-> x₁+x₂, Xᵉ,Yᵉ, P,W)
 	display(Fᵉ)
 end
 
@@ -2203,8 +2243,8 @@ Na entrada `[a,b]` da matriz local `Kᵉ` é armazenado o valor da expressão
 - `Kᵉ::Matrix{Float64}`: Matriz local a ser preenchida (modificada in-place).
 - `α::Float64`: Constante fornecida como dado de entrada da EDP.
 - `β::Float64`: Constante fornecida como dado de entrada da EDP.
-- `Xᵉ::Vector{Float64}`: Abscissas do quadrilátero ``\Omega^e``. Possui 4 entradas.
-- `Yᵉ::Vector{Float64}`: Ordenadas do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `Xᵉ::Vector{Float64}`: Abscissas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `Yᵉ::Vector{Float64}`: Ordenadas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
 - `P::Vector{Float64}`: Pontos de quadratura no intervalo padrão `[-1, 1]`.
 - `W::Vector{Float64}`: Pesos de quadratura associados a `P`.
 """
@@ -2627,18 +2667,6 @@ function solução_aproximada_vs_exata_quadrilatero()
     println(c)
     println("Solução exata:")
     println(c_exato)
-
-	# # Discretização no eixo x₁
-	# X = 0:0.01:1
-	
-	# plt = plot_solução_aproximada([c;0], Nx1, Nx2, EQoLG)
-	# plot(
-	# plot(X,X,(x₁, x₂) -> u(x₁, x₂),
-	# 	title="Solução Exata",
-	# 	seriestype = :surface, colorbar=false, color=:viridis, 
-	# 	xticks=[0, 0.5, 1],yticks=[0, 0.5, 1],zticks=[0, 1]),
-	# plt,
-	# layout=(1, 2))
 end
 
 # ╔═╡ b7bc093d-575d-4bca-b98e-1c860b6e4445
@@ -2708,18 +2736,18 @@ function plot_estudo_do_erro_quadrilatero()
 	end
 
     # Cria o gráfico do erro na norma L2 em função de h, diâmetro de cada Ωᵉ
-    plt = plot(
+    plt = Plots.plot(
         vec_h, vec_erro, lw=3, linestyle=:solid, markershape=:circle,
         label="Erro", title="Estudo do erro - elemento finito quadrilátero",
         xscale=:log10, yscale=:log10, legend=:topleft
     )
 
     # Adiciona a curva teórica de h² ao gráfico
-    plot!(plt, vec_h, vec_h.^2, lw=3, linestyle=:solid, label="h²")
+    Plots.plot!(plt, vec_h, vec_h.^2, lw=3, linestyle=:solid, label="h²")
 
     # Adiciona rótulos aos eixos
-    xlabel!("h")
-    ylabel!("Erro")
+    Plots.xlabel!("h")
+    Plots.ylabel!("Erro")
 
     # Exibe uma tabela com os valores de h e erro
     display("Tabela com os valores de h e erro:")
