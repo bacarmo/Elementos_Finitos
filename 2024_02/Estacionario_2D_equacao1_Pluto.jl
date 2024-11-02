@@ -4,13 +4,23 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
 # ╔═╡ 2f9d63db-0ffe-43b1-a29f-b4c92305a472
-using PlutoUI,PlutoTeachingTools, Plots, LaTeXStrings, GaussQuadrature, SparseArrays, DataFrames, LinearAlgebra
+using Pluto, PlutoUI,PlutoTeachingTools, Plots, LaTeXStrings, GaussQuadrature, SparseArrays, DataFrames, LinearAlgebra, Random
 
 # ╔═╡ 0cc5dd29-8119-4fe5-9047-b2ee62eb6893
 # ╠═╡ skip_as_script = true
 #=╠═╡
-PlutoUI.TableOfContents(title="Índice",depth=5,include_definitions=false)
+PlutoUI.TableOfContents(title = "Índice", depth = 5, include_definitions = false)
   ╠═╡ =#
 
 # ╔═╡ 354a7b37-db60-405d-a93b-a6d02a561cc0
@@ -460,42 +470,6 @@ html"""
 </center>
 """
 
-# ╔═╡ 1b7efd80-b78d-47a0-afe6-a4154979f018
-function abscissas_malha_regular(Nx1::Int64, h₁::Float64, e::Int64)::Vector{Float64}
-	i = mod(e-1,Nx1) # Inteiro entre 0 e Nx1-1
-	cst1 = i*h₁
-	cst2 = (i+1)*h₁
-	return [cst1, cst2, cst2, cst1]
-end	
-
-# ╔═╡ f888cec3-be68-42e5-890f-e2b3082430aa
-function ordenadas_malha_regular(Nx1::Int64, h₂::Float64, e::Int64)::Vector{Float64}
-	j = div(e-1,Nx1) # Inteiro entre 0 e Nx2-1
-	cst1 = j*h₂
-	cst2 = (j+1)*h₂
-	return [cst1, cst1, cst2, cst2]
-end	
-
-# ╔═╡ 6d71c7b7-4835-4709-bb72-34afc1dde92a
-function teste_malha_regular(Nx1, Nx2)
-	h₁ = 1/Nx1; h₂ = 1/Nx2;
-	
-	X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
-	for e=1:Nx1*Nx2
-		X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
-		Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
-	end
-	
-    display("Nx1 = $Nx1; Nx2 = $Nx2; h₁ = 1/$Nx1; h₂ = 1/$Nx2;")
-	display("Abscissas: ")
-	display(X)
-	display("Ordenadas: ")
-	display(Y)
-end
-
-# ╔═╡ 66cd54c0-c1ad-4da7-ba6c-dfcc42f78ea4
-teste_malha_regular(4, 2)
-
 # ╔═╡ 2450b17f-982b-4af8-bb68-7cca4f1944d6
 md"### Mudança de variável"
 
@@ -529,7 +503,7 @@ Observações:
 
 ``\bullet``  O determinante Jacobiano dessa aplicação é dado por 
 ```math
-J
+J(\xi)
 =
 \frac{\partial(x_1,x_2)}{\partial(\xi_1,\xi_2)}
 =
@@ -697,8 +671,8 @@ x_1(\xi) = \frac{h_1}{2}(\xi_1+1) + p_1.
 
 # Parâmetros
 - `ξ₁::Float64`: Primeira componente do ponto ``\xi\in\mathcal{R}=]-1,1[ \times]-1,1[``.
-- `h₁::Float64`: Comprimento da base do elemento finito retangular ``\Omega^e``..
-- `p₁::Float64`: Primeira componente do ponto inferior esquerdo do retângulo ``\Omega^e``..
+- `h₁::Float64`: Comprimento da base do elemento finito retangular ``\Omega^e``.
+- `p₁::Float64`: Primeira componente do ponto inferior esquerdo do retângulo ``\Omega^e``.
 
 # Retorno
 - `x₁::Float64`: Primeira coordenada de ``x \in \Omega^e`` resultante da mudança de variável em `ξ`.
@@ -1265,8 +1239,8 @@ n_{x_1}+1 & n_{x_1}+2 & \dots & 2n_{x_1}-1
 Matriz de conectividade local/global (LG). Relaciona a numeração local e global das funções ``\varphi``.
 
 # Parâmetros
-- `Nx1::Int64`: Número de subdivisões ao longo do eixo x₁.
-- `Nx2::Int64`: Número de subdivisões ao longo do eixo x₂.
+- `Nx1::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₁`.
+- `Nx2::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₂`.
 
 # Retorno
 - `LG::Matrix{Int64}`: Matriz de tamanho 4 x (Nx1 * Nx2), onde LG(a,e) fornece a numeração global da função local ``\varphi_a^e``.
@@ -1316,8 +1290,8 @@ md"#### Construção do vetor EQ"
 Calcula o valor de `m`, que representa a dimensão do subespaço aproximado `Vₘ`, e gera o vetor `EQ`, que fornece a reenumeração das funções globais `φ`.
 
 # Parâmetros
-- `Nx1::Int64`: Número de subdivisões ao longo do eixo x₁.
-- `Nx2::Int64`: Número de subdivisões ao longo do eixo x₂.
+- `Nx1::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₁`.
+- `Nx2::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₂`.
 
 # Retorno
 Uma tupla contendo:
@@ -1376,8 +1350,8 @@ Constrói o vetor global `F` de tamanho `m`, agregando os vetores locais `Fᵉ` 
 
 # Parâmetros
 - `f::Function`: Função ``f(x_1,x_2)`` fornecida como dado de entrada da EDP.
-- `Nx1::Int64`: Número de subdivisões ao longo do eixo x₁.
-- `Nx2::Int64`: Número de subdivisões ao longo do eixo x₂.
+- `Nx1::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₁`.
+- `Nx2::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₂`.
 - `m::Int64`: Dimensão do espaço aproximado `Vₘ`.
 - `EQoLG::Matrix{Int64}`: EQ[LG].
 
@@ -1469,8 +1443,8 @@ Gera a matriz esparsa `K` de tamanho `m x m`, montada a partir das matrizes loca
 # Parâmetros
 - `α::Float64`: Parâmetro fornecido como dado de entrada da EDP.
 - `β::Float64`: Parâmetro fornecido como dado de entrada da EDP.
-- `Nx1::Int64`: Número de subdivisões ao longo do eixo x₁.
-- `Nx2::Int64`: Número de subdivisões ao longo do eixo x₂.
+- `Nx1::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₁`.
+- `Nx2::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₂`.
 - `m::Int64`: Dimensão do espaço aproximado `Vₘ`.
 - `EQoLG::Matrix{Int64}`: ≡ EQ[LG].
 
@@ -1565,8 +1539,8 @@ Calcula o erro na norma ``L^2(\Omega)`` entre a solução exata `u` e a soluçã
 # Parâmetros
 - `u::Function`: Função u(x₁,x₂) que representa a solução exata da EDP.
 - `c̄::Vector{Float64}`: Vetor com os coeficientes da solução aproximada acrescido de um zero, i.e., `c̄ = [c; 0]`.
-- `Nx1::Int64`: Número de subdivisões ao longo do eixo x₁.
-- `Nx2::Int64`: Número de subdivisões ao longo do eixo x₂.
+- `Nx1::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₁`.
+- `Nx2::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₂`.
 - `EQoLG::Matrix{Int}`: EQ[LG].
 
 # Retorna
@@ -1686,67 +1660,6 @@ function plot_solução_aproximada(c̄::Vector{Float64},
 	return plt
 end
 
-# ╔═╡ ea18dc94-c885-4b67-a4bd-5ab43258b42c
-function solução_aproximada_vs_exata()
-    # Carrega os parâmetros de entrada da EDP
-    α, β, f, u = exemplo1()
-	
-    # Define o número de subdivisões ao longo dos eixos x₁ e x₂
-    Nx1 = 8
-    Nx2 = 8
-
-    # Exibe os parâmetros de entrada
-    println("Parâmetros de entrada:")
-    println("Exemplo 1 & Nx1 = $Nx1, Nx2 = $Nx2")
-    
-    # Define o comprimento da base (h₁) e altura (h₂) de cada elemento retangular Ωᵉ
-    h₁ = 1/Nx1
-    h₂ = 1/Nx2
-
-    # Gera a matriz de conectividade local/global (LG)
-    LG = monta_LG(Nx1, Nx2)
-
-    # Gera o valor de `m` e o vetor `EQ`
-    m, EQ = monta_EQ(Nx1, Nx2)
-
-    # Define a matriz de conectividade EQoLG
-    EQoLG = EQ[LG]
-
-    # Monta a matriz esparsa `K`
-    K = monta_K(α, β, Nx1, Nx2, m, EQoLG)
-
-    # Monta o vetor global `F`
-    F = monta_F(f, Nx1, Nx2, m, EQoLG)
-
-    # Resolve o sistema linear Kc = F
-    c = K \ F
-
-    # Calcula a solução exata nos nós internos da malha
-    c_exato = [u(x₁,x₂) for x₂ in h₂:h₂:1-h₂, x₁ in h₁:h₁:1-h₁]
-    
-    # Exibe a solução aproximada (vetor c) e a solução exata (vetor c_exato)
-    println("Solução aproximada:")
-    println(c)
-    println("Solução exata:")
-    println(c_exato)
-
-	# Discretização no eixo x₁
-	X = 0:0.01:1
-	
-	plt = plot_solução_aproximada([c;0], Nx1, Nx2, EQoLG)
-	Plots.plot(
-	Plots.plot(X,X,(x₁, x₂) -> u(x₁, x₂),
-		title="Solução Exata",
-		seriestype = :surface, colorbar=false, color=:viridis, 
-		xticks=[0, 0.5, 1],yticks=[0, 0.5, 1],zticks=[0, 1],
-		xlabel="x₁",ylabel="x₂"),
-	plt,
-	layout=(1, 2))
-end
-
-# ╔═╡ 13fa4b92-ce6a-4c9f-bb88-6b91024cff4b
-solução_aproximada_vs_exata()
-
 # ╔═╡ 8ff37696-bb35-445b-8ac0-575f2c74b9db
 md"#### Estudo da convergência do erro"
 
@@ -1825,10 +1738,13 @@ function plot_estudo_do_erro()
 end
 
 # ╔═╡ 08ccecca-f127-4adb-bd0e-0fdb2979b62a
-plt = plot_estudo_do_erro()
+plot_estudo_do_erro()
 
 # ╔═╡ 0351f91e-0ff0-4278-8662-21337048f137
 md"## Caso 2: ``\Omega^e`` quadrilátero"
+
+# ╔═╡ 535d81dd-6047-4bb9-95d4-d95a6a8f58a1
+@bind go Button("Atualizar Malha 2D")
 
 # ╔═╡ 02e87aa0-31bc-4682-83d1-8c780916a8a6
 md"### Mudança de variável"
@@ -1846,21 +1762,24 @@ x_2(\xi_1,\xi_2)
 \left\{
 \begin{aligned}
 x_1(\xi_1,\xi_2)
-= \sum_{a=1}^4 X_a^e\phi_a(\xi)
-\equiv X^e\cdot\phi(\xi),
+= \sum_{a=1}^4 X_1^e[a]\phi_a(\xi)
+\equiv X_1^e\cdot\phi(\xi),
 \\[5pt]
 x_2(\xi_1,\xi_2) 
-= \sum_{a=1}^4 Y_a^e\phi_a(\xi)
-\equiv Y^e\cdot\phi(\xi).
+= \sum_{a=1}^4 X_2^e[a]\phi_a(\xi)
+\equiv X_2^e\cdot\phi(\xi).
 \end{aligned}\right.
 \end{align}
 ```
 
 Observações:
 
-``\bullet``  ``X^e`` é um vetor com as abscissas dos vértices do elemento finito quadrilátero ``\Omega^e``.
+``\bullet`` 
+Em cada elemento finito quadrilátero ``\Omega^e``, a numeração local dos vértices segue a mesma convenção das funções locais ``\varphi_a^e(x)``, que é a mesma convenção da numeração das funções ``\phi_a(\xi)`` no elemento padrão ``\mathcal{R}=]-1,1[\times]-1,1[``.
 
-``\bullet``  ``Y^e`` é um vetor com as ordenadas dos vértices do elemento finito quadrilátero ``\Omega^e``.
+``\bullet``  ``X_1^e`` é um vetor com as abscissas dos vértices do elemento finito quadrilátero ``\Omega^e``.
+
+``\bullet``  ``X_2^e`` é um vetor com as ordenadas dos vértices do elemento finito quadrilátero ``\Omega^e``.
 
 ``\bullet``  ``\phi(\xi) = \Big[\phi_1(\xi),\phi_2(\xi),\phi_3(\xi),\phi_4(\xi)\Big]``.
 
@@ -1883,9 +1802,9 @@ M(\xi)
 \end{bmatrix}
 \equiv
 \begin{bmatrix} 
-X^e\cdot \partial_{\xi_1}\phi(\xi) & X^e\cdot \partial_{\xi_2}\phi(\xi)
+X_1^e\cdot \partial_{\xi_1}\phi(\xi) & X_1^e\cdot \partial_{\xi_2}\phi(\xi)
 \\[10pt]
-Y^e\cdot \partial_{\xi_1}\phi(\xi) & Y^e\cdot \partial_{\xi_2}\phi(\xi)
+X_2^e\cdot \partial_{\xi_1}\phi(\xi) & X_2^e\cdot \partial_{\xi_2}\phi(\xi)
 \end{bmatrix}
 ```
 
@@ -2005,7 +1924,7 @@ d\xi_1\,d\xi_2.
 # ╔═╡ d71f5899-2396-481c-bd51-258000aaccf7
 @doc raw"""
     monta_Fᵉ_quadrilatero!(Fᵉ::Vector{Float64}, f::Function,
-                           Xᵉ::Vector{Float64}, Yᵉ::Vector{Float64},
+                           X1e::Vector{Float64}, X2e::Vector{Float64},
                            P::Vector{Float64}, W::Vector{Float64})
 
 Na entrada `a` do vetor local `Fᵉ` é armazenado o valor aproximado da expressão 
@@ -2025,13 +1944,13 @@ utilizando quadratura gaussiana.
 # Parâmetros
 - `Fᵉ::Vector{Float64}`: Vetor força local a ser modificado. Possui 4 entradas.
 - `f::Function`: Função ``f(x_1,x_2)`` fornecida como dado de entrada da EDP.
-- `Xᵉ::Vector{Float64}`: Abscissas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
-- `Yᵉ::Vector{Float64}`: Ordenadas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `X1e::Vector{Float64}`: Abscissas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `X2e::Vector{Float64}`: Ordenadas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
 - `P::Vector{Float64}`: Pontos de quadratura no intervalo padrão `[-1, 1]`.
 - `W::Vector{Float64}`: Pesos de quadratura associados a `P`.
 """
 function monta_Fᵉ_quadrilatero!(Fᵉ::Vector{Float64}, f::Function,
-                                Xᵉ::Vector{Float64}, Yᵉ::Vector{Float64},
+                                X1e::Vector{Float64}, X2e::Vector{Float64},
                                 P::Vector{Float64}, W::Vector{Float64})
     # Zera as entradas do vetor local Fᵉ
     fill!(Fᵉ, 0.0)
@@ -2055,12 +1974,13 @@ function monta_Fᵉ_quadrilatero!(Fᵉ::Vector{Float64}, f::Function,
             vec_∂ϕ_∂ξ₁ = ∂ϕ_∂ξ₁(ξ₂)
             
             # Coordenadas físicas (x₁, x₂) mapeadas a partir de (ξ₁, ξ₂)
-            x₁ = dot(Xᵉ, vec_ϕ)
-            x₂ = dot(Yᵉ, vec_ϕ)
+            x₁ = dot(X1e, vec_ϕ)
+            x₂ = dot(X2e, vec_ϕ)
 
             # Calcula o determinante jacobiano do mapeamento isoparamétrico
-            detJ = dot(Xᵉ, vec_∂ϕ_∂ξ₁) * dot(Yᵉ, vec_∂ϕ_∂ξ₂) - 
-                   dot(Xᵉ, vec_∂ϕ_∂ξ₂) * dot(Yᵉ, vec_∂ϕ_∂ξ₁)
+            detJ = dot(X1e, vec_∂ϕ_∂ξ₁) * dot(X2e, vec_∂ϕ_∂ξ₂) - 
+                   dot(X1e, vec_∂ϕ_∂ξ₂) * dot(X2e, vec_∂ϕ_∂ξ₁)
+			@assert detJ > 0 "O determinante jacobiano deve ser positivo"
 
             # Calcula a contribuição de quadratura e acumula em Fᵉ
             for a in 1:4
@@ -2072,32 +1992,41 @@ end
 
 # ╔═╡ a7201500-7247-456f-8496-485064e49959
 function teste_monta_Fᵉ_quadrilatero()
-	Fᵉ = zeros(4)
-	
-	P, W = legendre(5)
-	
-	h₁ = 1/4
-	h₂ = 1/4
-	
-	Xᵉ = [0.0, h₁, h₁, 0.0]
-	Yᵉ = [0.0, 0.0, h₂, h₂]
-	
-	monta_Fᵉ_quadrilatero!(Fᵉ, (x₁,x₂)->4/(h₁*h₂), Xᵉ,Yᵉ, P,W)
-    display("Fᵉ - Teste 1")
-	display(Fᵉ)
-	
-	monta_Fᵉ_quadrilatero!(Fᵉ, (x₁,x₂)->(16*9*x₁*x₂)/((h₁*h₂)^2), Xᵉ,Yᵉ, P,W)
-    display("Fᵉ - Teste 2")
-	display(Fᵉ)
+    Fᵉ = zeros(4)
+    P, W = legendre(5)  # Pontos e pesos de quadratura de Gauss-Legendre
 
-	display("Fᵉ - Teste 3")
-	Xᵉ = [0.0, 2.0, 3.0, 1.0]
-	Yᵉ = [0.0, 0.0, 1.0, 1.0]
-	display("Xᵉ = $Xᵉ")
-	display("Yᵉ = $Yᵉ")
-	display("f(x₁,x₂) = x₁ + x₂")
-	monta_Fᵉ_quadrilatero!(Fᵉ, (x₁,x₂)-> x₁+x₂, Xᵉ,Yᵉ, P,W)
-	display(Fᵉ)
+    # Parâmetros de tamanho do elemento
+    h₁, h₂ = 1/4, 1/4
+
+    # Coordenadas do elemento quadrilátero padrão
+    X1e = [0.0, h₁,  h₁, 0.0]
+    X2e = [0.0, 0.0, h₂, h₂ ]
+
+    # Função para formatar a saída dos testes
+    function print_test_info(test_num, func_desc, X1e, X2e, Fᵉ)
+        display("Teste $test_num: $func_desc")
+        display("Coordenadas do elemento:")
+        display("  X1e = $X1e")
+        display("  X2e = $X2e")
+        display("Resultado Fᵉ:")
+        display(Fᵉ)
+        display("─" ^ 40)
+    end
+
+    # Teste 1: Função constante
+    monta_Fᵉ_quadrilatero!(Fᵉ, (x₁, x₂) -> 4 / (h₁ * h₂), X1e, X2e, P, W)
+    print_test_info(1, "f(x₁, x₂) = 4/($h₁ * $h₂)", X1e, X2e, Fᵉ)
+
+    # Teste 2: Função dependente de x₁ e x₂
+    monta_Fᵉ_quadrilatero!(Fᵉ, (x₁, x₂) -> (16 * 9 * x₁ * x₂) / ((h₁ * h₂) ^ 2),
+		                   X1e, X2e, P, W)
+    print_test_info(2,"f(x₁, x₂) = (16 * 9 * x₁ * x₂)/(($h₁ * $h₂)^2)",X1e,X2e,Fᵉ)
+
+    # Teste 3: Elemento com coordenadas arbitrárias e função somatória
+    X1e = [0.0, 2.0, 3.0, 1.0]
+    X2e = [0.0, 0.0, 1.0, 1.0]
+    monta_Fᵉ_quadrilatero!(Fᵉ, (x₁, x₂) -> x₁ + x₂, X1e, X2e, P, W)
+    print_test_info(3, "f(x₁, x₂) = x₁ + x₂", X1e, X2e, Fᵉ)
 end
 
 # ╔═╡ 1231b949-f351-4312-9059-4eff67bbff95
@@ -2234,22 +2163,52 @@ d\xi_1d\xi_2
 # ╔═╡ 0d9e933e-5910-4b15-b91c-c2ff6a6eef8a
 @doc raw"""
     monta_Kᵉ_quadrilatero!(Kᵉ::Matrix{Float64}, α::Float64, β::Float64, 
-                           Xᵉ::Vector{Float64}, Yᵉ::Vector{Float64}, 
+                           X1e::Vector{Float64}, X2e::Vector{Float64}, 
                            P::Vector{Float64}, W::Vector{Float64})
 
-Na entrada `[a,b]` da matriz local `Kᵉ` é armazenado o valor da expressão 
+Na entrada `a,b` da matriz local `Kᵉ` é armazenado o valor da expressão 
+```math
+\begin{align}
+&
+\alpha \hspace{-1mm}
+\int_{\mathcal{R}} \hspace{-1mm}
+\Big[
+\frac{\partial\phi_b}{\partial\xi_1}
+\Big(
+H^TH_{1,1}\frac{\partial\phi_a}{\partial\xi_1} +
+H^TH_{1,2}\frac{\partial\phi_a}{\partial\xi_2}
+\Big)
++
+\frac{\partial\phi_b}{\partial\xi_2}
+\Big(
+H^TH_{1,2}\frac{\partial\phi_a}{\partial\xi_1} +
+H^TH_{2,2}\frac{\partial\phi_a}{\partial\xi_2}
+\Big)
+\Big]
+\frac{1}{J}
+d\xi
+\\
+&
++\beta \hspace{-1mm}
+\int_{\mathcal{R}} \hspace{-1mm}
+\phi_b(\xi)
+\phi_a(\xi)
+J(\xi)
+d\xi_1d\xi_2
+\end{align}
+```
 
 # Parâmetros
 - `Kᵉ::Matrix{Float64}`: Matriz local a ser preenchida (modificada in-place).
 - `α::Float64`: Constante fornecida como dado de entrada da EDP.
 - `β::Float64`: Constante fornecida como dado de entrada da EDP.
-- `Xᵉ::Vector{Float64}`: Abscissas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
-- `Yᵉ::Vector{Float64}`: Ordenadas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `X1e::Vector{Float64}`: Abscissas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
+- `X2e::Vector{Float64}`: Ordenadas dos vértices do quadrilátero ``\Omega^e``. Possui 4 entradas.
 - `P::Vector{Float64}`: Pontos de quadratura no intervalo padrão `[-1, 1]`.
 - `W::Vector{Float64}`: Pesos de quadratura associados a `P`.
 """
 function monta_Kᵉ_quadrilatero!(Kᵉ::Matrix{Float64}, α::Float64, β::Float64, 
-                                Xᵉ::Vector{Float64}, Yᵉ::Vector{Float64}, 
+                                X1e::Vector{Float64}, X2e::Vector{Float64}, 
                                 P::Vector{Float64}, W::Vector{Float64})
     # Zera as entradas da matriz local Kᵉ
     fill!(Kᵉ, 0.0)
@@ -2273,13 +2232,14 @@ function monta_Kᵉ_quadrilatero!(Kᵉ::Matrix{Float64}, α::Float64, β::Float6
             vec_∂ϕ_∂ξ₁ = ∂ϕ_∂ξ₁(ξ₂)
 
             # Calcula as entradas da matriz Jacobiana
-            ∂x₁_∂ξ₁ = dot(Xᵉ, vec_∂ϕ_∂ξ₁)
-            ∂x₁_∂ξ₂ = dot(Xᵉ, vec_∂ϕ_∂ξ₂)
-            ∂x₂_∂ξ₁ = dot(Yᵉ, vec_∂ϕ_∂ξ₁)
-            ∂x₂_∂ξ₂ = dot(Yᵉ, vec_∂ϕ_∂ξ₂)
+            ∂x₁_∂ξ₁ = dot(X1e, vec_∂ϕ_∂ξ₁)
+            ∂x₁_∂ξ₂ = dot(X1e, vec_∂ϕ_∂ξ₂)
+            ∂x₂_∂ξ₁ = dot(X2e, vec_∂ϕ_∂ξ₁)
+            ∂x₂_∂ξ₂ = dot(X2e, vec_∂ϕ_∂ξ₂)
 
             # Calcula o determinante Jacobiano do mapeamento isoparamétrico
             detJ = ∂x₁_∂ξ₁ * ∂x₂_∂ξ₂ - ∂x₁_∂ξ₂ * ∂x₂_∂ξ₁
+			@assert detJ > 0 "O determinante jacobiano deve ser positivo"
 
             # Calcula as entradas da matriz Hᵀ * H
             HᵀH₁₁ = ∂x₂_∂ξ₂^2 + ∂x₁_∂ξ₂^2
@@ -2305,29 +2265,46 @@ end
 
 # ╔═╡ 23b73cbf-428d-498e-8edd-b8df09eacaaa
 function teste_monta_Kᵉ_quadrilatero()
-	h₁ = 1/4
-	h₂ = 1/4
-	
-	Xᵉ = [0.0, h₁, h₁, 0.0]
-	Yᵉ = [0.0, 0.0, h₂, h₂]
-
-	P, W = legendre(2)
-
 	Kᵉ = zeros(4,4)
+    P, W = legendre(2)  # Pontos e pesos de quadratura de Gauss-Legendre
+
+    # Parâmetros de tamanho do elemento
+    h₁, h₂ = 1/4, 1/4
+
+    # Coordenadas do elemento quadrilátero padrão
+    X1e = [0.0, h₁,  h₁, 0.0]
+    X2e = [0.0, 0.0, h₂, h₂ ]
+
+    # Função para formatar a saída dos testes
+    function print_test_info(test_num, α, β, X1e, X2e, Kᵉ)
+        display("Teste $test_num - Parâmetros: α = $α, β = $β")
+        display("Coordenadas do elemento:")
+        display("  X1e = $X1e")
+        display("  X2e = $X2e")
+        display("Resultado Kᵉ:")
+		display(Kᵉ)
+        display("─" ^ 40)
+    end
 	
 	# Teste 1
 	α = 6.0
 	β = 0.0
-	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, Xᵉ, Yᵉ, P, W)
-	display("Kᵉ - Teste 1")
-	display(Kᵉ)
+	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X1e, X2e, P, W)
+	print_test_info(1, α, β, X1e, X2e, Kᵉ)
 
 	# Teste 2
 	α = 0.0
 	β = (9*4)/(h₁*h₂)
-	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, Xᵉ, Yᵉ, P, W)
-	display("Kᵉ - Teste 2")
-	display(Kᵉ)	
+	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X1e, X2e, P, W)
+	print_test_info(2, α, β, X1e, X2e, Kᵉ)
+
+	# Teste 3: Novas condições para o teste
+    α = 1.0
+    β = 1.0
+    X1e = [0.0, 2.0, 3.0, 1.0]
+    X2e = [0.0, 0.0, 1.0, 1.0]
+	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X1e, X2e, P, W)
+	print_test_info(3, α, β, X1e, X2e, Kᵉ)
 end
 
 # ╔═╡ 6aa98255-9233-41bc-a103-2c6b6ba99779
@@ -2341,49 +2318,55 @@ md"#### Monta o vetor global ``F``"
 
 # ╔═╡ 168d171c-d470-4a39-bb62-9efc5976d9b0
 @doc raw"""
-    monta_F_quadrilatero(f::Function, X::Matrix{Float64}, Y::Matrix{Float64},
-                         m::Int64, EQoLG::Matrix{Int64}) -> Vector{Float64}
+    monta_F_quadrilatero(
+		f::Function, X₁::AbstractArray{Float64}, X₂::AbstractArray{Float64},
+        m::Int64, EQ::Vector{Int64}, LG::Matrix{Int64}) -> Vector{Float64}
 
 Constrói o vetor global `F` de tamanho `m`, agregando os vetores locais `Fᵉ` associados a cada elemento finito na malha.
 
 # Parâmetros
 - `f::Function`: Função ``f(x_1,x_2)`` fornecida como dado de entrada da EDP.
-- `X::Matrix{Float64}`: Matriz 4 x ne com as abscissas dos vértices de cada ``\Omega^e``.
-- `Y::Matrix{Float64}`: Matriz 4 x ne com as ordenadas dos vértices de cada ``\Omega^e``.
+- `X₁::AbstractArray{Float64}`: Matriz, ou vetor, com as abscissas dos vértices de cada nó da malha. `X₁[i]` deve informar a abscissa do `i`-ésimo nó da malha.
+- `X₂::AbstractArray{Float64}`: Matriz, ou vetor, com as ordenadas dos vértices de cada nó da malha. `X₂[i]` deve informar a ordenada do `i`-ésimo nó da malha.
 - `m::Int64`: Dimensão do espaço aproximado `Vₘ`.
-- `EQoLG::Matrix{Int64}`: EQ[LG].
+- `EQ::Vector{Int64}`: Vetor de inteiros que mapeia cada função global ``\varphi_i`` para sua nova numeração. As funções globais que fazem parte da base do espaço `Vₘ` recebem a numeração de `1` a `m`, enquanto as que não fazem parte recebem o valor `m + 1`.
+- `LG::Matrix{Int64}`: Matriz de conectividade local/global (LG). Relaciona a numeração local e global das funções ``\varphi_i`` em cada elemento finito. Tamanho ``4\times n_e``, sendo `4` o número de funções locais e ``n_e`` o número de elementos. Estamos considerando que a numeração global dos nós da malha é a mesma das funções globais ``\varphi_i``.
 
 # Retorno
 - `F::Vector{Float64}`: Vetor global de tamanho `m`.
 """
 function monta_F_quadrilatero(
-	f::Function, X::Matrix{Float64}, Y::Matrix{Float64}, 
-	m::Int64, EQoLG::Matrix{Int64}) :: Vector{Float64}
+	f::Function, X₁::AbstractArray{Float64}, X₂::AbstractArray{Float64}, 
+	m::Int64, EQ::Vector{Int64}, LG::Matrix{Int64}) :: Vector{Float64}
+	
     # Número total de elementos finitos na malha
-    ne = size(X)[2]
+    ne = size(LG,2)
 
-    # P: Pontos de quadratura de Gauss-Legendre (ordem 5)
-    # W: Pesos de quadratura de Gauss-Legendre
+    # Pontos e pesos de quadratura de Gauss-Legendre de ordem 5
     P, W = legendre(5)
 
-    # Inicializa o vetor local Fᵉ
+    # Inicializa os vetores locais e globais
     Fᵉ = zeros(4)
-
-    # Inicializa o vetor global F com tamanho (m+1)
     F = zeros(m+1)
     
-    # Loop sobre os elementos Ωᵉ (percorrendo cada subdivisão ao longo de x₂ e x₁)
+    # Itera sobre os elementos Ωᵉ
     for e in 1:ne
+		# Índices dos vértices/funções globais do elemento finito Ωᵉ
+		idx = LG[:,e]
+		
         # Coordenadas dos vértices do elemento finito Ωᵉ
-        Xᵉ = X[:,e]
-        Yᵉ = Y[:,e]
+        X1e = X₁[idx]
+        X2e = X₂[idx]
+
+		# Numeração de equação dos índices no vetor idx
+		idx = EQ[idx]
 
         # Monta o vetor local Fᵉ
-        monta_Fᵉ_quadrilatero!(Fᵉ, f, Xᵉ, Yᵉ, P, W)
+        monta_Fᵉ_quadrilatero!(Fᵉ, f, X1e, X2e, P, W)
 
         # Adiciona a contribuição do elemento finito ao vetor global F
         for a in 1:4
-            F[EQoLG[a,e]] += Fᵉ[a]
+            F[idx[a]] += Fᵉ[a]
         end
     end 
 
@@ -2391,69 +2374,14 @@ function monta_F_quadrilatero(
     return F[1:m]
 end
 
-# ╔═╡ 349ee82a-0889-4456-86ee-f7ea5372c4c4
-function teste_monta_F_quadrilatero()
-    # Teste 1: Malha 4x3 e função constante
-    Nx1, Nx2 = 4, 3
-    h₁, h₂ = 1/Nx1, 1/Nx2
-
-    # Monta a estrutura da malha e conectores
-    m, EQ = monta_EQ(Nx1, Nx2)
-    LG = monta_LG(Nx1, Nx2)
-    EQoLG = EQ[LG]
-
-	# Preenche as matrizes X e Y
-	X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
-	for e=1:Nx1*Nx2
-		X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
-		Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
-	end
-
-    # Calcula F com função constante f(x₁, x₂) = 4/(h₁*h₂)
-    F = monta_F_quadrilatero((x₁, x₂) -> 4.0 / (h₁ * h₂), X, Y, m, EQoLG)
-
-	# Exibe resultados do Teste 1
-    display("F - Teste 1")
-	display("Nx1 = 4; Nx2 = 3; h₁ = 1/Nx1; h₂ = 1/Nx2; f(x₁,x₂) = 4/(h₁*h₂);")
-	display(F)
-	
-    # Teste 2: Malha 4x4 e função variável em x₁ e x₂
-    Nx1, Nx2 = 4, 4
-    h₁, h₂ = 1/Nx1, 1/Nx2
-	
-    # Atualiza a estrutura da malha para o novo teste
-    m, EQ = monta_EQ(Nx1, Nx2)
-    LG = monta_LG(Nx1, Nx2)
-    EQoLG = EQ[LG]
-	
-    # Preenche as matrizes X e Y para a nova malha
-	X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
-	for e=1:Nx1*Nx2
-		X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
-		Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
-	end
-
-    # Calcula F com função f(x₁, x₂) dependente de x₁ e x₂
-    F = monta_F_quadrilatero((x₁, x₂) -> (16 * 9 * x₁ * x₂) / (h₁ * h₂)^2, 
-		                     X, Y, m, EQoLG)
-
-    # Exibe resultados do Teste 2
-    display("F - Teste 2")
-	display("Nx1 = Nx2 = 4; h₁ = 1/Nx1; h₂ = 1/Nx2; f(x₁,x₂) = (16*9*x₁*x₂)/((h₁*h₂)^2);")
-	display(F)
-end
-
-# ╔═╡ 76405500-25dd-4ff6-be68-aa5f86ae71e6
-teste_monta_F_quadrilatero()
-
 # ╔═╡ 0c7eb736-b739-4970-9198-a4b0eafdbef7
 md"#### Monta a matriz global ``K``"
 
 # ╔═╡ f2d2dfaf-12b8-4634-b17f-4d464f13c67b
 @doc raw"""
     monta_K_quadrilatero(α::Float64, β::Float64, 
-					     X::Matrix{Float64}, Y::Matrix{Float64}, 
-						 m::Int64, EQoLG::Matrix{Int64}) ->
+					     X₁::AbstractArray{Float64}, X₂::AbstractArray{Float64}, 
+						 m::Int64, EQ::Vector{Int64}, LG::Matrix{Int64}) ->
 						 SparseMatrixCSC{Float64, Int64}
 
 Gera a matriz esparsa `K` de tamanho `m x m`, montada a partir das matrizes locais `Kᵉ`.
@@ -2461,20 +2389,21 @@ Gera a matriz esparsa `K` de tamanho `m x m`, montada a partir das matrizes loca
 # Parâmetros
 - `α::Float64`: Parâmetro fornecido como dado de entrada da EDP.
 - `β::Float64`: Parâmetro fornecido como dado de entrada da EDP.
-- `X::Matrix{Float64}`: Matriz 4 x ne com as abscissas dos vértices de cada ``\Omega^e``.
-- `Y::Matrix{Float64}`: Matriz 4 x ne com as ordenadas dos vértices de cada ``\Omega^e``.
+- `X₁::AbstractArray{Float64}`: Matriz, ou vetor, com as abscissas dos vértices de cada nó da malha. `X₁[i]` deve informar a abscissa do `i`-ésimo nó da malha.
+- `X₂::AbstractArray{Float64}`: Matriz, ou vetor, com as ordenadas dos vértices de cada nó da malha. `X₂[i]` deve informar a ordenada do `i`-ésimo nó da malha.
 - `m::Int64`: Dimensão do espaço aproximado `Vₘ`.
-- `EQoLG::Matrix{Int64}`: ≡ EQ[LG].
+- `EQ::Vector{Int64}`: Vetor de inteiros que mapeia cada função global ``\varphi_i`` para sua nova numeração. As funções globais que fazem parte da base do espaço `Vₘ` recebem a numeração de `1` a `m`, enquanto as que não fazem parte recebem o valor `m + 1`.
+- `LG::Matrix{Int64}`: Matriz de conectividade local/global (LG). Relaciona a numeração local e global das funções ``\varphi_i`` em cada elemento finito. Tamanho ``4\times n_e``, sendo `4` o número de funções locais e ``n_e`` o número de elementos. Estamos considerando que a numeração global dos nós da malha é a mesma das funções globais ``\varphi_i``.
 
 # Retorno
 - `K::SparseMatrixCSC{Float64, Int64}`: Matriz esparsa `K` de tamanho `m x m`.
 """
 function monta_K_quadrilatero(α::Float64, β::Float64, 
-							  X::Matrix{Float64}, Y::Matrix{Float64},
-	                          m::Int64, EQoLG::Matrix{Int64}) :: 
+							  X₁::AbstractArray{Float64}, X₂::AbstractArray{Float64},
+	                          m::Int64, EQ::Vector{Int64}, LG::Matrix{Int64}) :: 
                               SparseMatrixCSC{Float64, Int64}
     # Número de elementos na malha
-    ne = size(X, 2)
+    ne = size(LG, 2)
 
     # Pontos e pesos de quadratura de Gauss-Legendre
     P, W = legendre(2)
@@ -2487,13 +2416,24 @@ function monta_K_quadrilatero(α::Float64, β::Float64,
 
     # Loop sobre os elementos
     for e = 1:ne
+		# Índices dos vértices/funções globais do elemento finito Ωᵉ
+		idx = LG[:,e]
+		
+        # Coordenadas dos vértices do elemento finito Ωᵉ
+        X1e = X₁[idx]
+        X2e = X₂[idx]
+
+		# Numeração de equação dos índices no vetor idx
+		idx = EQ[idx]
+		
 	    # Calcula a matriz local Kᵉ
-    	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X[:,e], Y[:,e], P, W)
+    	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X1e, X2e, P, W)
+		
         # Loop sobre as colunas (b) e linhas (a) da matriz local Kᵉ
         for b = 1:4
-            j = EQoLG[b,e]
+            j = idx[b]
             for a = 1:4
-                i = EQoLG[a,e]
+                i = idx[a]
                 K[i,j] += Kᵉ[a,b]
             end
         end
@@ -2503,55 +2443,34 @@ function monta_K_quadrilatero(α::Float64, β::Float64,
     return K[1:m, 1:m]
 end
 
-# ╔═╡ 95c4e028-12fe-4b5f-8a08-a6feba5ef87f
-function teste_monta_K_quadrilatero()
-	α, β = 1.0, 1.0
-    Nx1, Nx2 = 4, 3
-	h₁, h₂ = 1/Nx1, 1/Nx2
-
-	X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
-	for e=1:Nx1*Nx2
-		X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
-		Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
-	end
-	
-	m, EQ = monta_EQ(Nx1,Nx2)
-	LG = monta_LG(Nx1,Nx2)
-	EQoLG = EQ[LG]
-	
-	K = monta_K_quadrilatero(α, β, X, Y, m, EQoLG)
-
-	display("Parâmetros de entrada: α = 1.0; β = 1.0; Nx1 = 4; Nx2 = 3")
-	display(K)
-end
-
-# ╔═╡ a31bdbf9-c868-4357-9900-7704a907ec67
-teste_monta_K_quadrilatero()
-
 # ╔═╡ fff9f8c5-b715-46d3-816c-9290e02f3df2
 md"### Cálculo do erro"
 
 # ╔═╡ 35a2344a-557e-40fe-9d20-77e46892d619
 @doc raw"""
     erro_norma_L2_quadrilatero(u::Function, c̄::Vector{Float64}, 
-                               X::Matrix{Float64}, Y::Matrix{Float64},
-                               EQoLG::Matrix{Int64}) -> Float64
+                            X₁::AbstractArray{Float64},X₂::AbstractArray{Float64},
+                            EQ::Vector{Int64},LG::Matrix{Int64}) -> Float64
 
 Calcula o erro na norma ``L^2(\Omega)`` entre a solução exata `u` e a solução aproximada representada pelos coeficientes `c̄` em uma malha de elementos finitos quadriláteros.
 
 # Parâmetros
-- `u::Function`: Função u(x₁,x₂) que representa a solução exata da EDP.
+- `u::Function`: Função `u(x₁,x₂)` que representa a solução exata da EDP.
 - `c̄::Vector{Float64}`: Vetor com os coeficientes da solução aproximada acrescido de um zero, i.e., `c̄ = [c; 0]`.
-- `X::Matrix{Float64}`: Matriz 4 x ne com as abscissas dos vértices de cada ``\Omega^e``.
-- `Y::Matrix{Float64}`: Matriz 4 x ne com as ordenadas dos vértices de cada ``\Omega^e``.
-- `EQoLG::Matrix{Int}`: EQ[LG].
+- `X₁::AbstractArray{Float64}`: Matriz, ou vetor, com as abscissas dos vértices de cada nó da malha. `X₁[i]` deve informar a abscissa do `i`-ésimo nó da malha.
+- `X₂::AbstractArray{Float64}`: Matriz, ou vetor, com as ordenadas dos vértices de cada nó da malha. `X₂[i]` deve informar a ordenada do `i`-ésimo nó da malha.
+- `m::Int64`: Dimensão do espaço aproximado `Vₘ`.
+- `EQ::Vector{Int64}`: Vetor de inteiros que mapeia cada função global ``\varphi_i`` para sua nova numeração. As funções globais que fazem parte da base do espaço `Vₘ` recebem a numeração de `1` a `m`, enquanto as que não fazem parte recebem o valor `m + 1`.
+- `LG::Matrix{Int64}`: Matriz de conectividade local/global (LG). Relaciona a numeração local e global das funções ``\varphi_i`` em cada elemento finito. Tamanho ``4\times n_e``, sendo `4` o número de funções locais e ``n_e`` o número de elementos. Estamos considerando que a numeração global dos nós da malha é a mesma das funções globais ``\varphi_i``.
 
 # Retorna
 - `Float64`: O valor do erro na norma ``L^2(\Omega)`` entre a solução exata e aproximada, calculada pela integração em todos os elementos da malha utilizando quadratura de Gauss-Legendre.
 """
-function erro_norma_L2_quadrilatero(u::Function, c̄::Vector{Float64}, 
-	                                X::Matrix{Float64}, Y::Matrix{Float64}, 
-	                                EQoLG::Matrix{Int64}) :: Float64
+function erro_norma_L2_quadrilatero(
+	u::Function, c̄::Vector{Float64},
+	X₁::AbstractArray{Float64}, X₂::AbstractArray{Float64}, 
+	EQ::Vector{Int64}, LG::Matrix{Int64}) :: Float64
+	
     # Inicializa o erro
     erro = 0.0
 
@@ -2560,16 +2479,22 @@ function erro_norma_L2_quadrilatero(u::Function, c̄::Vector{Float64},
     P, W = legendre(Npg)
 
     # Número de elementos finitos na malha
-    ne = size(X, 2)
+    ne = size(LG, 2)
 
     # Loop sobre os elementos Ωᵉ
     for e = 1:ne
+		# Índices dos vértices/funções globais do elemento finito Ωᵉ
+		idx = LG[:,e]
+		
         # Coordenadas dos vértices do elemento finito Ωᵉ
-        Xᵉ = X[:, e]
-        Yᵉ = Y[:, e]
+        X1e = X₁[idx]
+        X2e = X₂[idx]
+
+		# Numeração de equação dos índices no vetor idx
+		idx = EQ[idx]
 
         # Obtém os coeficientes `c` da solução aproximada no elemento `e` 
-        ce = c̄[EQoLG[:, e]]
+        ce = c̄[idx]
 
         # Realiza a integração dupla usando quadratura de Gauss-Legendre
         for i = 1:Npg
@@ -2586,21 +2511,22 @@ function erro_norma_L2_quadrilatero(u::Function, c̄::Vector{Float64},
                 vec_ϕ = ϕ(ξ₁,ξ₂)
 
                 # Coordenadas físicas (x₁, x₂) mapeadas a partir de (ξ₁, ξ₂)
-                x₁ = dot(Xᵉ, vec_ϕ)
-                x₂ = dot(Yᵉ, vec_ϕ)
+                x₁ = dot(X1e, vec_ϕ)
+                x₂ = dot(X2e, vec_ϕ)
                 
                 # Calcula as derivadas de ϕ em relação a ξ₁ no ponto (ξ₁,ξ₂)
                 # Obs.: As funções em ∂ϕ_∂ξ₁ dependem apenas de ξ₂
                 vec_∂ϕ_∂ξ₁ = ∂ϕ_∂ξ₁(ξ₂)
 
                 # Calcula as entradas da matriz Jacobiana
-                ∂x₁_∂ξ₁ = dot(Xᵉ, vec_∂ϕ_∂ξ₁)
-                ∂x₁_∂ξ₂ = dot(Xᵉ, vec_∂ϕ_∂ξ₂)
-                ∂x₂_∂ξ₁ = dot(Yᵉ, vec_∂ϕ_∂ξ₁)
-                ∂x₂_∂ξ₂ = dot(Yᵉ, vec_∂ϕ_∂ξ₂)
+                ∂x₁_∂ξ₁ = dot(X1e, vec_∂ϕ_∂ξ₁)
+                ∂x₁_∂ξ₂ = dot(X1e, vec_∂ϕ_∂ξ₂)
+                ∂x₂_∂ξ₁ = dot(X2e, vec_∂ϕ_∂ξ₁)
+                ∂x₂_∂ξ₂ = dot(X2e, vec_∂ϕ_∂ξ₂)
 
                 # Calcula o determinante Jacobiano do mapeamento isoparamétrico
                 detJ = ∂x₁_∂ξ₁ * ∂x₂_∂ξ₂ - ∂x₁_∂ξ₂ * ∂x₂_∂ξ₁
+				@assert detJ > 0 "O determinante jacobiano deve ser positivo"
 
                 # Acumula a contribuição da quadratura
                 erro += W[i] * W[j] * ( u(x₁, x₂) - dot(ce, vec_ϕ) )^2 * detJ
@@ -2617,66 +2543,359 @@ md"### Simulações numéricas"
 # ╔═╡ 19adcc25-7816-494e-a30a-e4635cd188ca
 md"#### Solução aproximada vs solução exata"
 
+# ╔═╡ 0de8bb9c-6292-46d2-baef-d3194750717c
+md"#### Estudo da convergência do erro"
+
+# ╔═╡ a23fa502-6c1f-4635-be33-7f6573169258
+md"## Ferramentas"
+
+# ╔═╡ c04faf6a-15c3-48ee-8fe0-2960d3d93e47
+md"### Malha 2D"
+
+# ╔═╡ 549817df-7194-40b6-8cd4-5be18929256f
+Nx1box = @bind Nx1 NumberField(1:8; default=4);
+
+# ╔═╡ 3d082f08-7fb9-4d80-85b3-29671637b77c
+Nx2box = @bind Nx2 NumberField(1:8; default=3);
+
+# ╔═╡ 42c6f464-4c3d-4db9-a742-1cd4143813b0
+md"
+``Nx_1`` = $Nx1box: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo ``x_1``.
+
+``Nx_2`` = $Nx2box: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo ``x_2``.
+"
+
+# ╔═╡ 082dbe4c-c9bb-4e5e-b1b5-14393e96006e
+@doc raw"""
+    malha2D(Nx1::Int64, Nx2::Int64)
+
+Gera uma malha retangular na região `[0, 1] × [0, 1]` com partição uniforme, retornando coordenadas dos nós e os comprimentos dos lados dos elementos.
+
+# Parâmetros
+- `Nx1::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₁`.
+- `Nx2::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₂`.
+
+# Retorno
+`(X₁, X₂, h₁, h₂)`: Tupla com:
+- `X₁::Matrix{Float64}`: Matriz `(Nx1+1) x (Nx2+1)`. `X₁[i]` é a abscissa do i-ésimo nó.
+- `X₂::Matrix{Float64}`: Matriz `(Nx1+1) x (Nx2+1)`. `X₂[i]` é a ordenada do i-ésimo nó.
+- `h₁::Float64`: Comprimento da base dos elementos (`1/Nx1`).
+- `h₂::Float64`: Comprimento da altura dos elementos (`1/Nx2`).
+
+# Detalhes
+Nós enumerados conforme as funções globais ``\varphi_i``, da esquerda para direita e de baixo para cima. Funções ``\varphi_i`` são polinômios de Lagrange lineares, com ``\varphi_j(X₁[i], X₂[i]) = 1`` quando ``i == j`` e zero caso contrário.
+
+# Exemplo
+```julia
+X₁, X₂, h₁, h₂ = malha2D(4, 2)
+
+X₁
+# output
+5×3 Matrix{Float64}:
+ 0.0   0.0   0.0
+ 0.25  0.25  0.25
+ 0.5   0.5   0.5
+ 0.75  0.75  0.75
+ 1.0   1.0   1.0
+
+X₂
+# output
+5×3 Matrix{Float64}:
+ 0.0  0.5  1.0
+ 0.0  0.5  1.0
+ 0.0  0.5  1.0
+ 0.0  0.5  1.0
+ 0.0  0.5  1.0
+```
+"""
+function malha2D(Nx1, Nx2)
+    # Define o comprimento da base (h₁) e altura (h₂) de cada elemento retangular Ωᵉ
+    h₁, h₂ = 1 / Nx1, 1 / Nx2
+
+    # Define a discretização em x₁ e x₂
+    x₁ = collect(0:h₁:1)
+    x₂ = collect(0:h₂:1)
+
+    # Define as coordenadas de cada nó da malha
+    X₁ = [x₁[i] for i in 1:Nx1+1, j in 1:Nx2+1]
+    X₂ = [x₂[j] for i in 1:Nx1+1, j in 1:Nx2+1]
+
+    return X₁, X₂, h₁, h₂
+end
+
+# ╔═╡ ea18dc94-c885-4b67-a4bd-5ab43258b42c
+function solução_aproximada_vs_exata()
+    # Carrega os parâmetros de entrada da EDP
+    α, β, f, u = exemplo1()
+	
+	display("Exemplo 1: Malha uniforme de retângulos")
+    Nx1, Nx2 = 4, 3
+    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+    m, EQ = monta_EQ(Nx1, Nx2); LG = monta_LG(Nx1, Nx2); EQoLG = EQ[LG]
+	display("Parâmetros de entrada: α = $α; β = $β; Nx1 = $Nx1; Nx2 = $Nx2")
+
+    # Monta K, F e resolve o sistema linear Kc = F
+    K = monta_K(α, β, Nx1, Nx2, m, EQoLG)
+    F = monta_F(f, Nx1, Nx2, m, EQoLG)
+    c = K \ F
+
+    # Calcula a solução exata nos nós internos da malha
+    c_exato = u.(X₁[2:end-1,2:end-1],X₂[2:end-1,2:end-1])
+	c_exato = c_exato[:]
+    
+    # Exibe a solução aproximada (vetor c) e a solução exata (vetor c_exato)
+    display("Solução aproximada:")
+    display(c)
+    display("Solução exata:")
+    display(c_exato)
+	display("─" ^ 40)  # Linha divisória
+
+	# Discretização no eixo x₁
+	X = 0:0.01:1
+	
+	plt = plot_solução_aproximada([c;0], Nx1, Nx2, EQoLG)
+	Plots.plot(
+	Plots.plot(X,X,(x₁, x₂) -> u(x₁, x₂),
+		title="Solução Exata",
+		seriestype = :surface, colorbar=false, color=:viridis, 
+		xticks=[0, 0.5, 1],yticks=[0, 0.5, 1],zticks=[0, 1],
+		xlabel="x₁",ylabel="x₂"),
+	plt,
+	layout=(1, 2))
+end
+
+# ╔═╡ 13fa4b92-ce6a-4c9f-bb88-6b91024cff4b
+solução_aproximada_vs_exata()
+
+# ╔═╡ da6a91f3-4af1-4c67-84bb-8513f85c441c
+@doc raw"""
+    malha2D_adiciona_ruido!(X₁::Matrix{Float64}, X₂::Matrix{Float64}, 
+                            h₁::Float64, h₂::Float64)
+
+Modifica `X₁` e `X₂`, adicionando ruído nas coordenadas correspondentes aos nós internos.
+
+# Parâmetros
+- `X₁::Matrix{Float64}`: Matriz `(Nx1+1) x (Nx2+1)`. `X₁[i]` é a abscissa do i-ésimo nó.
+- `X₂::Matrix{Float64}`: Matriz `(Nx1+1) x (Nx2+1)`. `X₂[i]` é a ordenada do i-ésimo nó.
+- `h₁::Float64`: Comprimento da base dos elementos (`1/Nx1`).
+- `h₂::Float64`: Comprimento da altura dos elementos (`1/Nx2`).
+
+# Detalhes
+As matrizes `X₁` e `X₂` contêm as coordenadas dos nós de uma partição uniforme do domínio ``[0,1] \times [0,1]``. Esta função tem como objetivo adicionar ruído aleatório uniforme às coordenadas dos nós internos da malha. As coordenadas dos nós internos estão localizadas nas linhas e colunas internas das matrizes `X₁` e `X₂`. O ruído é gerado como segue:
+
+- `ruído_x₁ ~ U(-h₁/4, h₁/4)`: Aplicado em `X₁[2:end-1, 2:end-1]`.
+- `ruído_x₂ ~ U(-h₂/4, h₂/4)`: Aplicado em `X₂[2:end-1, 2:end-1]`.
+
+# Exemplo
+```julia
+using Random
+Random.seed!(42)  # Define uma semente para reprodutibilidade
+
+# Matrizes de coordenadas da malha:
+X₁ = [0.0   0.0   0.0;
+      0.25  0.25  0.25;
+      0.5   0.5   0.5;
+      0.75  0.75  0.75;
+      1.0   1.0   1.0]
+
+X₂ = [0.0  0.5  1.0;
+      0.0  0.5  1.0;
+      0.0  0.5  1.0;
+      0.0  0.5  1.0;
+      0.0  0.5  1.0]
+
+h₁, h₂ = 0.25, 0.5
+
+# Aplica ruído à malha
+malha2D_adiciona_ruido!(X₁, X₂, h₁, h₂)
+
+X₁
+# output
+5×3 Matrix{Float64}:
+ 0.0   0.0       0.0
+ 0.25  0.266168  0.25
+ 0.5   0.493792  0.5
+ 0.75  0.747176  0.75
+ 1.0   1.0       1.0
+
+X₂
+# output
+5×3 Matrix{Float64}:
+ 0.0  0.5       1.0
+ 0.0  0.550782  1.0
+ 0.0  0.543337  1.0
+ 0.0  0.416474  1.0
+ 0.0  0.5       1.0
+```
+"""
+function malha2D_adiciona_ruido!(X₁::Matrix{Float64}, X₂::Matrix{Float64},
+	                             h₁::Float64, h₂::Float64)
+    # Verifica se as matrizes têm a mesma dimensão
+    @assert size(X₁) == size(X₂) "X₁ e X₂ devem ter as mesmas dimensões"
+    
+    # Verifica se a malha é suficientemente grande para ter nós internos
+    if size(X₁, 1) > 2 && size(X₁, 2) > 2
+        # Define os limites do ruído
+        ruído_limite₁, ruído_limite₂ = h₁ / 4, h₂ / 4
+        
+        # Aplica ruído uniforme aos nós internos
+        X₁[2:end-1, 2:end-1] .+= ruído_limite₁ * 
+							    (rand(Float64, size(X₁[2:end-1,2:end-1])) .- 0.5) * 2
+        X₂[2:end-1, 2:end-1] .+= ruído_limite₂ * 
+		                        (rand(Float64, size(X₂[2:end-1,2:end-1])) .- 0.5) * 2
+    end
+end
+
+# ╔═╡ 349ee82a-0889-4456-86ee-f7ea5372c4c4
+function teste_monta_F_quadrilatero()
+    # Função auxiliar para exibir resultados
+    function exibir_resultados(teste_num, Nx1, Nx2, h₁, h₂, funcao, F)
+        display("Teste $teste_num: f(x₁,x₂) = $funcao")
+        display("Malha uniforme: Nx1 = $Nx1; Nx2 = $Nx2; h₁ = $h₁; h₂ = $h₂;")
+        display("Resultado F:")
+        display(F)
+        display("─" ^ 40)  # Linha divisória
+    end
+	
+    # TESTE 1: Malha 4x3 e função f constante
+    Nx1, Nx2 = 4, 3
+    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+
+    F = monta_F_quadrilatero((x₁, x₂) -> 4.0 / (h₁ * h₂), X₁, X₂, m, EQ, LG)
+    exibir_resultados(1, Nx1, Nx2, h₁, h₂, "4 / (h₁ * h₂)", F)
+	
+    # TESTE 2: Malha 4x4 e função f(x₁,x₂) = (16 * 9 * x₁ * x₂) / (h₁ * h₂)^2
+    Nx1, Nx2 = 4, 4
+    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+
+    F = monta_F_quadrilatero((x₁, x₂) -> (16 * 9 * x₁ * x₂) / (h₁ * h₂)^2, 
+		                     X₁, X₂, m, EQ, LG)
+    exibir_resultados(2, Nx1, Nx2, h₁, h₂, "(16 * 9 * x₁ * x₂) / (h₁ * h₂)^2", F)
+
+	# TESTE 3: Malha 4x3 com ruído nos nós internos e função f(x₁,x₂) = x₁ + x₂
+    Nx1, Nx2 = 4, 3
+    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+	
+	Random.seed!(42)  # Define uma semente para reprodutibilidade
+	malha2D_adiciona_ruido!(X₁, X₂, h₁, h₂)
+
+    # Calcula F
+    F = monta_F_quadrilatero((x₁, x₂) -> x₁ + x₂, X₁, X₂, m, EQ, LG)
+	display("Teste 3: f(x₁,x₂) = x₁ + x₂")
+	display("Gera malha uniforme com Nx1=4 e Nx2=3 e adiciona ruido nos nós internos.")
+	display("X₁ =")
+	display(X₁)
+	display("X₂ =")
+	display(X₂)
+	display("Resultado F:")
+	display(F)
+end
+
+# ╔═╡ 76405500-25dd-4ff6-be68-aa5f86ae71e6
+teste_monta_F_quadrilatero()
+
+# ╔═╡ 95c4e028-12fe-4b5f-8a08-a6feba5ef87f
+function teste_monta_K_quadrilatero()
+	display("Teste 1: Malha uniforme de retângulos")
+	α, β = 1.0, 1.0
+    Nx1, Nx2 = 4, 3
+    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+
+	# Monta a matriz K para a malha sem ruído
+	K = monta_K_quadrilatero(α, β, X₁, X₂, m, EQ, LG)
+
+	display("Parâmetros de entrada: α = 1.0; β = 1.0; Nx1 = 4; Nx2 = 3")
+	display("Resultado K:")
+	display(K)
+	display("─" ^ 40)  # Linha divisória
+
+	# TESTE 2: Malha 4x3 com ruído nos nós internos
+ 	Random.seed!(42)  # Define uma semente para reprodutibilidade
+	malha2D_adiciona_ruido!(X₁, X₂, h₁, h₂)
+
+    # Recalcula K com a malha com ruído
+    K = monta_K_quadrilatero(α, β, X₁, X₂, m, EQ, LG)
+	display("Teste 2: Adiciona ruído nos nós internos")
+	display("X₁ =")
+	display(X₁)
+	display("X₂ =")
+	display(X₂)
+	display("Resultado K:")
+	display(K)
+end
+
+# ╔═╡ a31bdbf9-c868-4357-9900-7704a907ec67
+teste_monta_K_quadrilatero()
+
 # ╔═╡ 44a17c38-4b0a-4501-b616-b926cf4a332a
 function solução_aproximada_vs_exata_quadrilatero()
     # Carrega os parâmetros de entrada da EDP
     α, β, f, u = exemplo1()
 	
-    # Define o número de subdivisões ao longo dos eixos x₁ e x₂
-    Nx1 = 4
-    Nx2 = 4
+	# Define parâmetros da malha e monta a estrutura inicial
+    Nx1, Nx2 = 4, 3
+    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+    m, EQ = monta_EQ(Nx1, Nx2); 
+	LG = monta_LG(Nx1, Nx2);
 
-    # Exibe os parâmetros de entrada
-    println("Parâmetros de entrada:")
-    println("Exemplo 1 & Nx1 = $Nx1, Nx2 = $Nx2")
-    
-    # Define o comprimento da base (h₁) e altura (h₂) de cada elemento retangular Ωᵉ
-    h₁ = 1/Nx1
-    h₂ = 1/Nx2
+	display("Exemplo 1: Malha uniforme de retângulos")
+	display("Parâmetros de entrada: α = $α; β = $β; Nx1 = $Nx1; Nx2 = $Nx2")
 
-	# Gera X, Y
-	X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
-	for e=1:Nx1*Nx2
-		X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
-		Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
-	end
-	
-    # Gera a matriz de conectividade local/global (LG)
-    LG = monta_LG(Nx1, Nx2)
-
-    # Gera o valor de `m` e o vetor `EQ`
-    m, EQ = monta_EQ(Nx1, Nx2)
-
-    # Define a matriz de conectividade EQoLG
-    EQoLG = EQ[LG]
-
-    # Monta a matriz esparsa `K`
-    K = monta_K_quadrilatero(α, β, X, Y, m, EQoLG)
-
-    # Monta o vetor global `F`
-    F = monta_F_quadrilatero(f, X, Y, m, EQoLG)
-
-    # Resolve o sistema linear Kc = F
+    # Monta matriz K, vetor F e resolve o sistema linear Kc = F
+    K = monta_K_quadrilatero(α, β, X₁, X₂, m, EQ, LG)
+    F = monta_F_quadrilatero(f, X₁, X₂, m, EQ, LG)
     c = K \ F
 
     # Calcula a solução exata nos nós internos da malha
-    c_exato = [u(x₁,x₂) for x₂ in h₂:h₂:1-h₂, x₁ in h₁:h₁:1-h₁]
+    c_exato = u.(X₁[2:end-1,2:end-1],X₂[2:end-1,2:end-1])
+	c_exato = c_exato[:]
     
     # Exibe a solução aproximada (vetor c) e a solução exata (vetor c_exato)
-    println("Solução aproximada:")
-    println(c)
-    println("Solução exata:")
-    println(c_exato)
+    display("Solução aproximada:")
+    display(c)
+    display("Solução exata:")
+    display(c_exato)
+	display("─" ^ 40)  # Linha divisória
+
+	# Exemplo 2: Malha com ruído nos nós internos
+	display("Exemplo 2: Adiciona ruído nos nós internos")
+ 	Random.seed!(42)  # Define uma semente para reprodutibilidade
+	malha2D_adiciona_ruido!(X₁, X₂, h₁, h₂)
+	display("X₁ =")
+	display(X₁)
+	display("X₂ =")
+	display(X₂)
+
+    # Monta novamente K, F e resolve o sistema com a malha perturbada
+    K = monta_K_quadrilatero(α, β, X₁, X₂, m, EQ, LG)
+    F = monta_F_quadrilatero(f, X₁, X₂, m, EQ, LG)
+    c = K \ F
+
+    # Recalcula a solução exata nos nós internos da malha com ruído
+    c_exato = u.(X₁[2:end-1,2:end-1],X₂[2:end-1,2:end-1])
+	c_exato = c_exato[:]
+    
+    # Exibe a solução aproximada (vetor c) e a solução exata (vetor c_exato)
+    display("Solução aproximada:")
+    display(c)
+    display("Solução exata:")
+    display(c_exato)
+	display("─" ^ 40)  # Linha divisória
 end
 
 # ╔═╡ b7bc093d-575d-4bca-b98e-1c860b6e4445
 solução_aproximada_vs_exata_quadrilatero()
 
-# ╔═╡ 0de8bb9c-6292-46d2-baef-d3194750717c
-md"#### Estudo da convergência do erro"
-
 # ╔═╡ 3ec31011-c972-4ca0-8154-917851a128ee
-function estudo_do_erro_quadrilatero()
+function estudo_do_erro_quadrilatero(ruido = true)
 	# Carrega os dados de entrada da EDP
     α, β, f, u = exemplo1()
 
@@ -2692,15 +2911,12 @@ function estudo_do_erro_quadrilatero()
 
     # Loop sobre os valores de Nx1 e Nx2
     for i = 1:length(vec_Nx1)
-        Nx1 = vec_Nx1[i]
-        Nx2 = vec_Nx2[i]
-		h₁, h₂ = 1/Nx1, 1/Nx2
+        Nx1, Nx2 = vec_Nx1[i], vec_Nx2[i]
 
-		# Gera X, Y
-		X = zeros(4,Nx1*Nx2); Y = zeros(4,Nx1*Nx2);
-		for e=1:Nx1*Nx2
-			X[:,e] = abscissas_malha_regular(Nx1, h₁, e);
-			Y[:,e] = ordenadas_malha_regular(Nx1, h₂, e);
+		# Gera X₁, X₂
+		X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+		if ruido
+			malha2D_adiciona_ruido!(X₁, X₂, h₁, h₂)
 		end
 
         # Gera a matriz de conectividade local/global (LG)
@@ -2709,36 +2925,39 @@ function estudo_do_erro_quadrilatero()
         # Gera o valor de `m` e o vetor `EQ`
         m, EQ = monta_EQ(Nx1, Nx2)
 
-        # Define a matriz de conectividade EQoLG
-        EQoLG = EQ[LG]
-
         # Monta a matriz esparsa `K`
-        K = monta_K_quadrilatero(α, β, X, Y, m, EQoLG)
+        K = monta_K_quadrilatero(α, β, X₁, X₂, m, EQ, LG)
 
         # Monta o vetor global `F`
-        F = monta_F_quadrilatero(f, X, Y, m, EQoLG)
+        F = monta_F_quadrilatero(f, X₁, X₂, m, EQ, LG)
 
         # Resolve o sistema linear Kc = F
         c = K \ F
 
         # Calcula o erro na norma L2 entre a solução exata `u` e a solução aproximada
-        vec_erro[i] = erro_norma_L2_quadrilatero(u, [c;0], X, Y, EQoLG)
+        vec_erro[i] = erro_norma_L2_quadrilatero(u, [c;0], X₁, X₂, EQ, LG)
     end
 
     return vec_h, vec_erro
 end
 
 # ╔═╡ da417534-ce5e-4f99-b286-29fbb4ad8899
-function plot_estudo_do_erro_quadrilatero()
+function plot_estudo_do_erro_quadrilatero(ruido = true)
 	# Realiza o estudo do erro e mede o tempo de execução
 	@time begin
-		vec_h, vec_erro = estudo_do_erro_quadrilatero()
+		vec_h, vec_erro = estudo_do_erro_quadrilatero(ruido)
+	end
+
+	if ruido
+		título = "Elemento quadrilátero - Malha com ruído"
+	else
+		título = "Malha uniforme de retângulos"
 	end
 
     # Cria o gráfico do erro na norma L2 em função de h, diâmetro de cada Ωᵉ
     plt = Plots.plot(
         vec_h, vec_erro, lw=3, linestyle=:solid, markershape=:circle,
-        label="Erro", title="Estudo do erro - elemento finito quadrilátero",
+        label="Erro", title=título,
         xscale=:log10, yscale=:log10, legend=:topleft
     )
 
@@ -2750,6 +2969,7 @@ function plot_estudo_do_erro_quadrilatero()
     Plots.ylabel!("Erro")
 
     # Exibe uma tabela com os valores de h e erro
+	display(título)
     display("Tabela com os valores de h e erro:")
     display(DataFrame(h=vec_h, erro=vec_erro))
 
@@ -2758,7 +2978,76 @@ function plot_estudo_do_erro_quadrilatero()
 end
 
 # ╔═╡ d1c5f722-5251-4d46-a1e0-03a9bfe9857b
-plot_estudo_do_erro_quadrilatero()
+plot_estudo_do_erro_quadrilatero(false)
+
+# ╔═╡ bcbee09f-e4cd-49ce-8110-488a3db3df22
+plot_estudo_do_erro_quadrilatero(true)
+
+# ╔═╡ e609ae65-d339-43c1-a650-fc3bb40e0c52
+@doc raw"""
+    plot_malha2D(X₁::AbstractArray{Float64}, X₂::AbstractArray{Float64},
+				 LG::Matrix{Int64}) -> Plot
+
+Desenha uma malha 2D com nós e contornos dos elementos.
+
+# Parâmetros
+- `X₁::AbstractArray{Float64}`: `X₁[i]` é a abscissa do i-ésimo nó da malha.
+- `X₂::AbstractArray{Float64}`: `X₁[i]` é a ordanada do i-ésimo nó da malha.
+- `LG::Matrix{Int64}`: Matriz de conectividade local/global (LG). Relaciona a numeração local e global das funções ``\varphi_i``. Estamos considerando que a numeração global dos nós é a mesma das funções ``\varphi_i``.
+
+# Retorna
+- `fig::Plot`: Figura contendo a malha 2D.
+"""
+function plot_malha2D(X₁::AbstractArray{Float64}, X₂::AbstractArray{Float64},
+	                  LG::Matrix{Int64})
+    # Cria uma nova figura
+    fig = Plots.plot(legend=false, aspect_ratio=:equal,
+		             xticks=0:0.25:1,  # Defina os ticks do eixo x
+                     yticks=0:0.25:1)  # Defina os ticks do eixo y
+
+    # Adiciona os nós da malha
+    Plots.scatter!(X₁, X₂, markersize=4, color=:blue)
+
+    # Adiciona as linhas de contorno dos elementos
+    for e in 1:size(LG, 2)
+        # Obtém os índices dos nós do elemento `e`
+        i₁, i₂, i₃, i₄ = LG[:, e]
+
+        # Adiciona as linhas de contorno do elemento `e`
+        Plots.plot!([X₁[i₁], X₁[i₂], X₁[i₃], X₁[i₄], X₁[i₁]], 
+                    [X₂[i₁], X₂[i₂], X₂[i₃], X₂[i₄], X₂[i₁]], color=:black)
+    end
+
+    return fig
+end
+
+# ╔═╡ 88432d2c-a4fc-4281-a9ad-86c06a8bd709
+function exemplo_malha2D(Nx1, Nx2; ruido = true)
+    # Cria a malha original
+    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+
+	# Adiciona ruido
+	if ruido
+		malha2D_adiciona_ruido!(X₁, X₂, h₁, h₂)
+	end
+    # Define a matriz de conectividade local/global (LG)
+    LG = monta_LG(Nx1, Nx2)
+
+    # Cria a figura da malha 2D
+    fig = plot_malha2D(X₁, X₂, LG)
+
+	return fig
+end
+
+# ╔═╡ e2356e37-a483-42f8-a19d-e00d07e6ff47
+let
+	go
+	fig = exemplo_malha2D(Nx1,Nx2)  # Aqui a função é chamada inicialmente
+	ylabel!(fig,L"x_2")
+	xlabel!(fig,L"x_1")
+	yticks!(fig, 0:1/Nx2:1)             # Define ticks do eixo x₂
+	xticks!(fig, 0:1/Nx1:1, rotation=45)# Define ticks do eixo x₁
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2768,8 +3057,10 @@ GaussQuadrature = "d54b0c1a-921d-58e0-8e36-89d8069c0969"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
 PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
@@ -2777,6 +3068,7 @@ DataFrames = "~1.7.0"
 GaussQuadrature = "~0.5.8"
 LaTeXStrings = "~1.4.0"
 Plots = "~1.40.8"
+Pluto = "~0.20.0"
 PlutoTeachingTools = "~0.3.1"
 PlutoUI = "~0.7.60"
 """
@@ -2787,7 +3079,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.1"
 manifest_format = "2.0"
-project_hash = "c527844ee69c89f35166b052f50fd926e3842ad6"
+project_hash = "581d5133950e84b33f4af37e695783f2a4670431"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -2885,6 +3177,12 @@ git-tree-sha1 = "ea32b83ca4fefa1768dc84e504cc0a94fb1ab8d1"
 uuid = "f0e56b4a-5159-44fe-b623-3e5288b988bb"
 version = "2.4.2"
 
+[[deps.Configurations]]
+deps = ["ExproniconLite", "OrderedCollections", "TOML"]
+git-tree-sha1 = "4358750bb58a3caefd5f37a4a0c5bfdbbf075252"
+uuid = "5218b696-f38b-4ac9-8b61-a12ec717816d"
+version = "0.17.6"
+
 [[deps.Contour]]
 git-tree-sha1 = "439e35b0b36e2e5881738abc8857bd92ad6ff9a8"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
@@ -2968,6 +3266,16 @@ git-tree-sha1 = "1c6317308b9dc757616f0b5cb379db10494443a7"
 uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
 version = "2.6.2+0"
 
+[[deps.ExpressionExplorer]]
+git-tree-sha1 = "0889fdf7ac69b67b65f54b763941967e0a08b7b3"
+uuid = "21656369-7473-754a-2065-74616d696c43"
+version = "1.0.4"
+
+[[deps.ExproniconLite]]
+git-tree-sha1 = "4c9ed87a6b3cd90acf24c556f2119533435ded38"
+uuid = "55351af7-c7e9-48d6-89ff-24e801d99491"
+version = "0.10.13"
+
 [[deps.FFMPEG]]
 deps = ["FFMPEG_jll"]
 git-tree-sha1 = "53ebe7511fa11d33bec688a9178fac4e49eeee00"
@@ -3017,6 +3325,12 @@ version = "1.0.14+0"
 deps = ["Random"]
 uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 version = "1.11.0"
+
+[[deps.FuzzyCompletions]]
+deps = ["REPL"]
+git-tree-sha1 = "be713866335f48cfb1285bff2d0cbb8304c1701c"
+uuid = "fb4132e2-a121-4a70-b8a1-d5b831dcdcc2"
+version = "0.5.5"
 
 [[deps.GLFW_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Xorg_libXcursor_jll", "Xorg_libXi_jll", "Xorg_libXinerama_jll", "Xorg_libXrandr_jll", "libdecor_jll", "xkbcommon_jll"]
@@ -3203,6 +3517,11 @@ version = "0.16.5"
     SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
 
+[[deps.LazilyInitializedFields]]
+git-tree-sha1 = "8f7f3cabab0fd1800699663533b6d5cb3fc0e612"
+uuid = "0e77f7df-68c5-4e49-93ce-4cd80f5598bf"
+version = "1.2.2"
+
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
 uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
@@ -3328,6 +3647,12 @@ git-tree-sha1 = "2fa9ee3e63fd3a4f7a9a4f4744a52f4856de82df"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.13"
 
+[[deps.Malt]]
+deps = ["Distributed", "Logging", "RelocatableFolders", "Serialization", "Sockets"]
+git-tree-sha1 = "02a728ada9d6caae583a0f87c1dd3844f99ec3fd"
+uuid = "36869731-bdee-424d-aa32-cab38c994e3b"
+version = "1.1.2"
+
 [[deps.Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
@@ -3362,6 +3687,12 @@ version = "1.11.0"
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 version = "2023.12.12"
+
+[[deps.MsgPack]]
+deps = ["Serialization"]
+git-tree-sha1 = "f5db02ae992c260e4826fe78c942954b48e1d9c2"
+uuid = "99f44e22-a591-53d1-9472-aa23ef4bd671"
+version = "1.2.1"
 
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
@@ -3487,6 +3818,18 @@ version = "1.40.8"
     ImageInTerminal = "d8c32880-2388-543b-8c61-d9f865259254"
     Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
+[[deps.Pluto]]
+deps = ["Base64", "Configurations", "Dates", "Downloads", "ExpressionExplorer", "FileWatching", "FuzzyCompletions", "HTTP", "HypertextLiteral", "InteractiveUtils", "Logging", "LoggingExtras", "MIMEs", "Malt", "Markdown", "MsgPack", "Pkg", "PlutoDependencyExplorer", "PrecompileSignatures", "PrecompileTools", "REPL", "RegistryInstances", "RelocatableFolders", "Scratch", "Sockets", "TOML", "Tables", "URIs", "UUIDs"]
+git-tree-sha1 = "7bfacc26d134744edc825f1434abca4960f53936"
+uuid = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
+version = "0.20.0"
+
+[[deps.PlutoDependencyExplorer]]
+deps = ["ExpressionExplorer", "InteractiveUtils", "Markdown"]
+git-tree-sha1 = "4bc5284f77d731196d3e97f23abb732ad6f2a6e4"
+uuid = "72656b73-756c-7461-726b-72656b6b696b"
+version = "1.0.4"
+
 [[deps.PlutoHooks]]
 deps = ["InteractiveUtils", "Markdown", "UUIDs"]
 git-tree-sha1 = "072cdf20c9b0507fdd977d7d246d90030609674b"
@@ -3516,6 +3859,11 @@ deps = ["DataAPI", "Future"]
 git-tree-sha1 = "36d8b4b899628fb92c2749eb488d884a926614d3"
 uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
 version = "1.4.3"
+
+[[deps.PrecompileSignatures]]
+git-tree-sha1 = "18ef344185f25ee9d51d80e179f8dad33dc48eb1"
+uuid = "91cefc8d-f054-46dc-8f8c-26e11d7c5411"
+version = "3.0.3"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -3590,6 +3938,12 @@ version = "0.6.12"
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.2.2"
+
+[[deps.RegistryInstances]]
+deps = ["LazilyInitializedFields", "Pkg", "TOML", "Tar"]
+git-tree-sha1 = "ffd19052caf598b8653b99404058fce14828be51"
+uuid = "2792f1a3-b283-48e8-9a74-f99dce5104f3"
+version = "0.1.0"
 
 [[deps.RelocatableFolders]]
 deps = ["SHA", "Scratch"]
@@ -4097,7 +4451,7 @@ version = "1.4.1+1"
 
 # ╔═╡ Cell order:
 # ╠═2f9d63db-0ffe-43b1-a29f-b4c92305a472
-# ╠═0cc5dd29-8119-4fe5-9047-b2ee62eb6893
+# ╟─0cc5dd29-8119-4fe5-9047-b2ee62eb6893
 # ╟─354a7b37-db60-405d-a93b-a6d02a561cc0
 # ╟─34ae963b-4aed-4504-9cd2-b6bfd5237833
 # ╟─c2e3404b-1584-407b-8f37-11f0b72a204c
@@ -4132,10 +4486,6 @@ version = "1.4.1+1"
 # ╟─61fccc23-8111-42ec-9fe0-2e3d4ef993b3
 # ╟─f6cfbb5a-933b-48da-a488-0e21972ca15d
 # ╟─8c7c8177-b8e8-4257-82b1-ba2125dc4d4a
-# ╟─1b7efd80-b78d-47a0-afe6-a4154979f018
-# ╟─f888cec3-be68-42e5-890f-e2b3082430aa
-# ╟─6d71c7b7-4835-4709-bb72-34afc1dde92a
-# ╟─66cd54c0-c1ad-4da7-ba6c-dfcc42f78ea4
 # ╟─2450b17f-982b-4af8-bb68-7cca4f1944d6
 # ╟─2f8e0a58-3476-4c04-aebe-4dec4f0f1db8
 # ╟─0f85f3a1-beaa-4321-abb2-c671e75d0b15
@@ -4187,6 +4537,9 @@ version = "1.4.1+1"
 # ╟─a173a245-a285-47a6-8ed6-8c3b540ed440
 # ╟─08ccecca-f127-4adb-bd0e-0fdb2979b62a
 # ╟─0351f91e-0ff0-4278-8662-21337048f137
+# ╟─42c6f464-4c3d-4db9-a742-1cd4143813b0
+# ╟─535d81dd-6047-4bb9-95d4-d95a6a8f58a1
+# ╟─e2356e37-a483-42f8-a19d-e00d07e6ff47
 # ╟─02e87aa0-31bc-4682-83d1-8c780916a8a6
 # ╟─b5d52f2c-4f5e-4a0b-9213-3ddb7b127037
 # ╟─e9d8f33d-d586-40e4-8228-42f2dd81cfb5
@@ -4222,5 +4575,14 @@ version = "1.4.1+1"
 # ╟─3ec31011-c972-4ca0-8154-917851a128ee
 # ╟─da417534-ce5e-4f99-b286-29fbb4ad8899
 # ╟─d1c5f722-5251-4d46-a1e0-03a9bfe9857b
+# ╟─bcbee09f-e4cd-49ce-8110-488a3db3df22
+# ╟─a23fa502-6c1f-4635-be33-7f6573169258
+# ╟─c04faf6a-15c3-48ee-8fe0-2960d3d93e47
+# ╠═549817df-7194-40b6-8cd4-5be18929256f
+# ╠═3d082f08-7fb9-4d80-85b3-29671637b77c
+# ╠═88432d2c-a4fc-4281-a9ad-86c06a8bd709
+# ╟─082dbe4c-c9bb-4e5e-b1b5-14393e96006e
+# ╟─da6a91f3-4af1-4c67-84bb-8513f85c441c
+# ╟─e609ae65-d339-43c1-a650-fc3bb40e0c52
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
