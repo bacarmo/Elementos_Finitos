@@ -15,7 +15,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ 2f9d63db-0ffe-43b1-a29f-b4c92305a472
-using Pluto, PlutoUI,PlutoTeachingTools, Plots, LaTeXStrings, GaussQuadrature, SparseArrays, DataFrames, LinearAlgebra, Random
+using Pluto, PlutoUI,PlutoTeachingTools, Plots, LaTeXStrings, GaussQuadrature, SparseArrays, DataFrames, LinearAlgebra, Random, BenchmarkTools
 
 # ╔═╡ 0cc5dd29-8119-4fe5-9047-b2ee62eb6893
 # ╠═╡ skip_as_script = true
@@ -2004,29 +2004,32 @@ function teste_monta_Fᵉ_quadrilatero()
 
     # Função para formatar a saída dos testes
     function print_test_info(test_num, func_desc, X1e, X2e, Fᵉ)
+		display("─" ^ 40)
         display("Teste $test_num: $func_desc")
         display("Coordenadas do elemento:")
         display("  X1e = $X1e")
         display("  X2e = $X2e")
         display("Resultado Fᵉ:")
         display(Fᵉ)
-        display("─" ^ 40)
+        display("Resultado de @btime monta_Fᵉ_quadrilatero!(...)")
     end
 
     # Teste 1: Função constante
     monta_Fᵉ_quadrilatero!(Fᵉ, (x₁, x₂) -> 4 / (h₁ * h₂), X1e, X2e, P, W)
     print_test_info(1, "f(x₁, x₂) = 4/($h₁ * $h₂)", X1e, X2e, Fᵉ)
+	@btime monta_Fᵉ_quadrilatero!($Fᵉ, (x₁, x₂) -> 4/($h₁ * $h₂), $X1e, $X2e, $P, $W)
 
     # Teste 2: Função dependente de x₁ e x₂
-    monta_Fᵉ_quadrilatero!(Fᵉ, (x₁, x₂) -> (16 * 9 * x₁ * x₂) / ((h₁ * h₂) ^ 2),
-		                   X1e, X2e, P, W)
-    print_test_info(2,"f(x₁, x₂) = (16 * 9 * x₁ * x₂)/(($h₁ * $h₂)^2)",X1e,X2e,Fᵉ)
+    monta_Fᵉ_quadrilatero!(Fᵉ, (x₁, x₂) -> (16 * 9 * x₁ * x₂) / ((h₁ * h₂) ^ 2),                                X1e, X2e, P, W)
+    print_test_info(2,"f(x₁, x₂) = (16 * 9 * x₁ * x₂)/(($h₁ * $h₂)^2)", X1e, X2e, Fᵉ)
+	@btime monta_Fᵉ_quadrilatero!($Fᵉ, (x₁, x₂) -> (16*9*x₁*x₂)/(($h₁ * $h₂)^2),                                   $X1e, $X2e, $P, $W)
 
     # Teste 3: Elemento com coordenadas arbitrárias e função somatória
     X1e = [0.0, 2.0, 3.0, 1.0]
     X2e = [0.0, 0.0, 1.0, 1.0]
     monta_Fᵉ_quadrilatero!(Fᵉ, (x₁, x₂) -> x₁ + x₂, X1e, X2e, P, W)
     print_test_info(3, "f(x₁, x₂) = x₁ + x₂", X1e, X2e, Fᵉ)
+	@btime monta_Fᵉ_quadrilatero!($Fᵉ, (x₁, x₂) -> x₁ + x₂, $X1e, $X2e, $P, $W)
 end
 
 # ╔═╡ 1231b949-f351-4312-9059-4eff67bbff95
@@ -2277,13 +2280,14 @@ function teste_monta_Kᵉ_quadrilatero()
 
     # Função para formatar a saída dos testes
     function print_test_info(test_num, α, β, X1e, X2e, Kᵉ)
+		display("─" ^ 40)
         display("Teste $test_num - Parâmetros: α = $α, β = $β")
         display("Coordenadas do elemento:")
         display("  X1e = $X1e")
         display("  X2e = $X2e")
         display("Resultado Kᵉ:")
 		display(Kᵉ)
-        display("─" ^ 40)
+        display("Resultado de @btime monta_Kᵉ_quadrilatero!(...)")
     end
 	
 	# Teste 1
@@ -2291,12 +2295,14 @@ function teste_monta_Kᵉ_quadrilatero()
 	β = 0.0
 	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X1e, X2e, P, W)
 	print_test_info(1, α, β, X1e, X2e, Kᵉ)
+	@btime monta_Kᵉ_quadrilatero!($Kᵉ, $α, $β, $X1e, $X2e, $P, $W)
 
 	# Teste 2
 	α = 0.0
 	β = (9*4)/(h₁*h₂)
 	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X1e, X2e, P, W)
 	print_test_info(2, α, β, X1e, X2e, Kᵉ)
+	@btime monta_Kᵉ_quadrilatero!($Kᵉ, $α, $β, $X1e, $X2e, $P, $W)
 
 	# Teste 3: Novas condições para o teste
     α = 1.0
@@ -2305,6 +2311,7 @@ function teste_monta_Kᵉ_quadrilatero()
     X2e = [0.0, 0.0, 1.0, 1.0]
 	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X1e, X2e, P, W)
 	print_test_info(3, α, β, X1e, X2e, Kᵉ)
+	@btime monta_Kᵉ_quadrilatero!($Kᵉ, $α, $β, $X1e, $X2e, $P, $W)
 end
 
 # ╔═╡ 6aa98255-9233-41bc-a103-2c6b6ba99779
@@ -2750,11 +2757,12 @@ end
 function teste_monta_F_quadrilatero()
     # Função auxiliar para exibir resultados
     function exibir_resultados(teste_num, Nx1, Nx2, h₁, h₂, funcao, F)
+		display("─" ^ 40)  # Linha divisória
         display("Teste $teste_num: f(x₁,x₂) = $funcao")
         display("Malha uniforme: Nx1 = $Nx1; Nx2 = $Nx2; h₁ = $h₁; h₂ = $h₂;")
         display("Resultado F:")
         display(F)
-        display("─" ^ 40)  # Linha divisória
+		display("Resultado de @btime monta_F_quadrilatero(...)")
     end
 	
     # TESTE 1: Malha 4x3 e função f constante
@@ -2766,6 +2774,8 @@ function teste_monta_F_quadrilatero()
     F = monta_F_quadrilatero((x₁, x₂) -> 4.0 / (h₁ * h₂), X₁, X₂, m, EQ, LG)
     exibir_resultados(1, Nx1, Nx2, h₁, h₂, "4 / (h₁ * h₂)", F)
 	
+	@btime monta_F_quadrilatero((x₁, x₂) -> 4.0/($h₁ * $h₂), $X₁, $X₂, $m, $EQ, $LG)
+	
     # TESTE 2: Malha 4x4 e função f(x₁,x₂) = (16 * 9 * x₁ * x₂) / (h₁ * h₂)^2
     Nx1, Nx2 = 4, 4
     X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
@@ -2775,6 +2785,8 @@ function teste_monta_F_quadrilatero()
     F = monta_F_quadrilatero((x₁, x₂) -> (16 * 9 * x₁ * x₂) / (h₁ * h₂)^2, 
 		                     X₁, X₂, m, EQ, LG)
     exibir_resultados(2, Nx1, Nx2, h₁, h₂, "(16 * 9 * x₁ * x₂) / (h₁ * h₂)^2", F)
+	
+	@btime monta_F_quadrilatero((x₁, x₂) -> (16 * 9 * x₁ * x₂)/($h₁ * $h₂)^2, $X₁,                               $X₂, $m, $EQ, $LG)
 
 	# TESTE 3: Malha 4x3 com ruído nos nós internos e função f(x₁,x₂) = x₁ + x₂
     Nx1, Nx2 = 4, 3
@@ -2787,6 +2799,7 @@ function teste_monta_F_quadrilatero()
 
     # Calcula F
     F = monta_F_quadrilatero((x₁, x₂) -> x₁ + x₂, X₁, X₂, m, EQ, LG)
+	display("─" ^ 40)  # Linha divisória
 	display("Teste 3: f(x₁,x₂) = x₁ + x₂")
 	display("Gera malha uniforme com Nx1=4 e Nx2=3 e adiciona ruido nos nós internos.")
 	display("X₁ =")
@@ -2795,6 +2808,10 @@ function teste_monta_F_quadrilatero()
 	display(X₂)
 	display("Resultado F:")
 	display(F)
+	display("Resultado de @btime monta_F_quadrilatero(...)")
+	@btime monta_F_quadrilatero((x₁, x₂) -> x₁ + x₂, $X₁, $X₂, $m, $EQ, $LG);
+	
+	return nothing
 end
 
 # ╔═╡ 76405500-25dd-4ff6-be68-aa5f86ae71e6
@@ -2815,6 +2832,8 @@ function teste_monta_K_quadrilatero()
 	display("Parâmetros de entrada: α = 1.0; β = 1.0; Nx1 = 4; Nx2 = 3")
 	display("Resultado K:")
 	display(K)
+	display("Resultado de @btime monta_K_quadrilatero(...)")
+	@btime monta_K_quadrilatero($α, $β, $X₁, $X₂, $m, $EQ, $LG)
 	display("─" ^ 40)  # Linha divisória
 
 	# TESTE 2: Malha 4x3 com ruído nos nós internos
@@ -2830,6 +2849,10 @@ function teste_monta_K_quadrilatero()
 	display(X₂)
 	display("Resultado K:")
 	display(K)
+	display("Resultado de @btime monta_K_quadrilatero(...)")
+	@btime monta_K_quadrilatero($α, $β, $X₁, $X₂, $m, $EQ, $LG)
+
+	return nothing
 end
 
 # ╔═╡ a31bdbf9-c868-4357-9900-7704a907ec67
@@ -3052,6 +3075,7 @@ end
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 GaussQuadrature = "d54b0c1a-921d-58e0-8e36-89d8069c0969"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
@@ -3064,6 +3088,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
+BenchmarkTools = "~1.5.0"
 DataFrames = "~1.7.0"
 GaussQuadrature = "~0.5.8"
 LaTeXStrings = "~1.4.0"
@@ -3079,7 +3104,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.1"
 manifest_format = "2.0"
-project_hash = "581d5133950e84b33f4af37e695783f2a4670431"
+project_hash = "9585cb54739d313860b063d593c6d5623ea19110"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -3098,6 +3123,12 @@ version = "1.11.0"
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 version = "1.11.0"
+
+[[deps.BenchmarkTools]]
+deps = ["JSON", "Logging", "Printf", "Profile", "Statistics", "UUIDs"]
+git-tree-sha1 = "f1dff6729bc61f4d49e140da1af55dcd1ac97b2f"
+uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+version = "1.5.0"
 
 [[deps.BitFlags]]
 git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
@@ -3886,6 +3917,10 @@ version = "2.4.0"
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+version = "1.11.0"
+
+[[deps.Profile]]
+uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 version = "1.11.0"
 
 [[deps.Qt6Base_jll]]
