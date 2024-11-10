@@ -1280,6 +1280,9 @@ function monta_LG(Nx1::Int64, Nx2::Int64)::Matrix{Int64}
     return LG
 end
 
+# ╔═╡ 9caa51d3-907d-4d22-88bd-90cce81f465c
+@benchmark monta_LG(128, 128)
+
 # ╔═╡ 973ed431-0e2d-43f5-a407-fe73f868ab40
 md"#### Construção do vetor EQ"
 
@@ -1334,6 +1337,9 @@ function monta_EQ(Nx1::Int64, Nx2::Int64) :: Tuple{Int64,Vector{Int64}}
 
     return m, EQ
 end
+
+# ╔═╡ 826d67a3-cce6-4d36-b1ff-4c044710ea1d
+@benchmark monta_EQ(128, 128)
 
 # ╔═╡ 73081276-d764-401a-8f92-cc6b09620613
 md"### Monta globais"
@@ -1543,7 +1549,7 @@ Calcula o erro na norma ``L^2(\Omega)`` entre a solução exata `u` e a soluçã
 - `Nx2::Int64`: Número de subdivisões do intervalo `[0, 1]` ao longo do eixo `x₂`.
 - `EQoLG::Matrix{Int}`: EQ[LG].
 
-# Retorna
+# Retorno
 - `Float64`: O valor do erro na norma ``L^2(\Omega)`` entre a solução exata e aproximada, calculada pela integração em todos os elementos da malha utilizando quadratura de Gauss-Legendre.
 """
 function erro_norma_L2(u::Function, c̄::Vector{Float64}, Nx1::Int64, Nx2::Int64, EQoLG::Matrix{Int64}) :: Float64
@@ -2011,29 +2017,34 @@ function teste_monta_Fᵉ_quadrilatero()
         display("  X2e = $X2e")
         display("Resultado Fᵉ:")
         display(Fᵉ)
-        display("Resultado de @btime monta_Fᵉ_quadrilatero!(...)")
     end
 
     # Teste 1: Função constante
     monta_Fᵉ_quadrilatero!(Fᵉ, (x₁, x₂) -> 4 / (h₁ * h₂), X1e, X2e, P, W)
     print_test_info(1, "f(x₁, x₂) = 4/($h₁ * $h₂)", X1e, X2e, Fᵉ)
-	@btime monta_Fᵉ_quadrilatero!($Fᵉ, (x₁, x₂) -> 4/($h₁ * $h₂), $X1e, $X2e, $P, $W)
-
+	
     # Teste 2: Função dependente de x₁ e x₂
     monta_Fᵉ_quadrilatero!(Fᵉ, (x₁, x₂) -> (16 * 9 * x₁ * x₂) / ((h₁ * h₂) ^ 2),                                X1e, X2e, P, W)
     print_test_info(2,"f(x₁, x₂) = (16 * 9 * x₁ * x₂)/(($h₁ * $h₂)^2)", X1e, X2e, Fᵉ)
-	@btime monta_Fᵉ_quadrilatero!($Fᵉ, (x₁, x₂) -> (16*9*x₁*x₂)/(($h₁ * $h₂)^2),                                   $X1e, $X2e, $P, $W)
 
     # Teste 3: Elemento com coordenadas arbitrárias e função somatória
     X1e = [0.0, 2.0, 3.0, 1.0]
     X2e = [0.0, 0.0, 1.0, 1.0]
     monta_Fᵉ_quadrilatero!(Fᵉ, (x₁, x₂) -> x₁ + x₂, X1e, X2e, P, W)
     print_test_info(3, "f(x₁, x₂) = x₁ + x₂", X1e, X2e, Fᵉ)
-	@btime monta_Fᵉ_quadrilatero!($Fᵉ, (x₁, x₂) -> x₁ + x₂, $X1e, $X2e, $P, $W)
 end
 
 # ╔═╡ 1231b949-f351-4312-9059-4eff67bbff95
 teste_monta_Fᵉ_quadrilatero()
+
+# ╔═╡ c26a7e5e-62c8-4009-811a-32f63a0f8811
+let # Teste 3 - Benchmark 
+	Fᵉ = zeros(4)
+    X1e = [0.0, 2.0, 3.0, 1.0]
+    X2e = [0.0, 0.0, 1.0, 1.0]
+	P, W = legendre(5)
+	@benchmark monta_Fᵉ_quadrilatero!($Fᵉ, (x₁, x₂) -> x₁ + x₂, $X1e, $X2e, $P, $W)
+end
 
 # ╔═╡ c1568323-4f8d-41c1-8c53-3753ae35aa45
 md"#### Cálculo da matriz local ``K^e``"
@@ -2287,7 +2298,6 @@ function teste_monta_Kᵉ_quadrilatero()
         display("  X2e = $X2e")
         display("Resultado Kᵉ:")
 		display(Kᵉ)
-        display("Resultado de @btime monta_Kᵉ_quadrilatero!(...)")
     end
 	
 	# Teste 1
@@ -2295,14 +2305,12 @@ function teste_monta_Kᵉ_quadrilatero()
 	β = 0.0
 	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X1e, X2e, P, W)
 	print_test_info(1, α, β, X1e, X2e, Kᵉ)
-	@btime monta_Kᵉ_quadrilatero!($Kᵉ, $α, $β, $X1e, $X2e, $P, $W)
 
 	# Teste 2
 	α = 0.0
 	β = (9*4)/(h₁*h₂)
 	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X1e, X2e, P, W)
 	print_test_info(2, α, β, X1e, X2e, Kᵉ)
-	@btime monta_Kᵉ_quadrilatero!($Kᵉ, $α, $β, $X1e, $X2e, $P, $W)
 
 	# Teste 3: Novas condições para o teste
     α = 1.0
@@ -2311,11 +2319,20 @@ function teste_monta_Kᵉ_quadrilatero()
     X2e = [0.0, 0.0, 1.0, 1.0]
 	monta_Kᵉ_quadrilatero!(Kᵉ, α, β, X1e, X2e, P, W)
 	print_test_info(3, α, β, X1e, X2e, Kᵉ)
-	@btime monta_Kᵉ_quadrilatero!($Kᵉ, $α, $β, $X1e, $X2e, $P, $W)
 end
 
 # ╔═╡ 6aa98255-9233-41bc-a103-2c6b6ba99779
 teste_monta_Kᵉ_quadrilatero()
+
+# ╔═╡ 7561310c-b747-4750-b2e1-aa0e4986fd36
+let # Teste 3 - Benchmark 
+	Kᵉ = zeros(4,4)
+	α, β = 1.0, 1.0
+    X1e = [0.0, 2.0, 3.0, 1.0]
+    X2e = [0.0, 0.0, 1.0, 1.0]
+	P, W = legendre(2)
+	@benchmark monta_Kᵉ_quadrilatero!($Kᵉ, $α, $β, $X1e, $X2e, $P, $W)
+end
 
 # ╔═╡ b1c042e6-2b8b-43ab-bb84-6d522bc36b06
 md"### Monta globais"
@@ -2379,6 +2396,24 @@ function monta_F_quadrilatero(
 
     # Retorna o vetor global F com tamanho `m`, excluindo a última entrada adicional
     return F[1:m]
+end
+
+# ╔═╡ 171ed27d-899b-4b19-a7f9-59f07034f38c
+let # Teste 3 - Benchmark 
+    Nx1, Nx2 = 4, 3
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+    X₁ = [0.0   0.0       0.0       0.0
+          0.25  0.266168  0.275391  0.25
+          0.5   0.493792  0.521668  0.5
+          0.75  0.747176  0.708237  0.75
+          1.0   1.0       1.0       1.0]
+    X₂ = [0.0   0.333333  0.666667  1.0
+          0.0   0.352246  0.633228  1.0
+          0.0   0.36139   0.693524  1.0
+          0.0   0.326172  0.689905  1.0
+          0.0   0.333333  0.666667  1.0]
+	@benchmark monta_F_quadrilatero((x₁, x₂) -> x₁ + x₂, $X₁, $X₂, $m, $EQ, $LG)
 end
 
 # ╔═╡ 0c7eb736-b739-4970-9198-a4b0eafdbef7
@@ -2450,28 +2485,70 @@ function monta_K_quadrilatero(α::Float64, β::Float64,
     return K[1:m, 1:m]
 end
 
+# ╔═╡ 07c85862-2820-4946-b6e5-e8cfd3a493ad
+let # Teste 2 - Benchmark 
+	α, β = 1.0, 1.0
+    Nx1, Nx2 = 4, 3
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+    X₁ = [0.0   0.0       0.0       0.0
+          0.25  0.266168  0.275391  0.25
+          0.5   0.493792  0.521668  0.5
+          0.75  0.747176  0.708237  0.75
+          1.0   1.0       1.0       1.0]
+    X₂ = [0.0   0.333333  0.666667  1.0
+          0.0   0.352246  0.633228  1.0
+          0.0   0.36139   0.693524  1.0
+          0.0   0.326172  0.689905  1.0
+          0.0   0.333333  0.666667  1.0]
+	@benchmark monta_K_quadrilatero($α, $β, $X₁, $X₂, $m, $EQ, $LG)
+end
+
 # ╔═╡ fff9f8c5-b715-46d3-816c-9290e02f3df2
 md"### Cálculo do erro"
 
 # ╔═╡ 35a2344a-557e-40fe-9d20-77e46892d619
 @doc raw"""
     erro_norma_L2_quadrilatero(u::Function, c̄::Vector{Float64}, 
-                            X₁::AbstractArray{Float64},X₂::AbstractArray{Float64},
-                            EQ::Vector{Int64},LG::Matrix{Int64}) -> Float64
+                         X₁::AbstractArray{Float64}, X₂::AbstractArray{Float64},
+                         EQ::Vector{Int64}, LG::Matrix{Int64}) -> Float64
 
-Calcula o erro na norma ``L^2(\Omega)`` entre a solução exata `u` e a solução aproximada representada pelos coeficientes `c̄` em uma malha de elementos finitos quadriláteros.
+Calcula o erro entre a solução exata ``u(x)`` e a solução aproximada 
+``\displaystyle u_h(x) = \sum_{j=1}^m c_j \varphi_j(x)``, sobre uma malha de elementos finitos quadriláteros.
+A norma do erro é definida como:
+```math
+\|u-u_h\|
+= 
+\sqrt{\int_\Omega |u(x)-u_h(x)|^2 \, dx}.
+```
 
 # Parâmetros
 - `u::Function`: Função `u(x₁,x₂)` que representa a solução exata da EDP.
 - `c̄::Vector{Float64}`: Vetor com os coeficientes da solução aproximada acrescido de um zero, i.e., `c̄ = [c; 0]`.
 - `X₁::AbstractArray{Float64}`: Matriz, ou vetor, com as abscissas dos vértices de cada nó da malha. `X₁[i]` deve informar a abscissa do `i`-ésimo nó da malha.
 - `X₂::AbstractArray{Float64}`: Matriz, ou vetor, com as ordenadas dos vértices de cada nó da malha. `X₂[i]` deve informar a ordenada do `i`-ésimo nó da malha.
-- `m::Int64`: Dimensão do espaço aproximado `Vₘ`.
 - `EQ::Vector{Int64}`: Vetor de inteiros que mapeia cada função global ``\varphi_i`` para sua nova numeração. As funções globais que fazem parte da base do espaço `Vₘ` recebem a numeração de `1` a `m`, enquanto as que não fazem parte recebem o valor `m + 1`.
 - `LG::Matrix{Int64}`: Matriz de conectividade local/global (LG). Relaciona a numeração local e global das funções ``\varphi_i`` em cada elemento finito. Tamanho ``4\times n_e``, sendo `4` o número de funções locais e ``n_e`` o número de elementos. Estamos considerando que a numeração global dos nós da malha é a mesma das funções globais ``\varphi_i``.
 
-# Retorna
+# Retorno
 - `Float64`: O valor do erro na norma ``L^2(\Omega)`` entre a solução exata e aproximada, calculada pela integração em todos os elementos da malha utilizando quadratura de Gauss-Legendre.
+
+# Detalhes
+```math
+\begin{align}
+\|u-u_h\|^2
+= &
+\int_\Omega |u(x)-u_h(x)|^2dx
+\\[5pt]
+=&
+\sum_{e=1}^{n_e} \int_{\Omega^e} |u(x)-u_h(x)|^2dx
+\\[5pt]
+=&
+\sum_{e=1}^{n_e} \int_{-1}^{1} \int_{-1}^{1}
+\big|u\big(x(\xi)\big)
+-\sum_{a=1}^{4}\bar{c}_{EQoLG(a,e)}\phi_a(\xi)\big|^2|J|d\xi.
+\end{align}
+```
 """
 function erro_norma_L2_quadrilatero(
 	u::Function, c̄::Vector{Float64},
@@ -2674,6 +2751,117 @@ end
 # ╔═╡ 13fa4b92-ce6a-4c9f-bb88-6b91024cff4b
 solução_aproximada_vs_exata()
 
+# ╔═╡ 349ee82a-0889-4456-86ee-f7ea5372c4c4
+function teste_monta_F_quadrilatero()
+    # Função auxiliar para exibir resultados
+    function exibir_resultados(teste_num, Nx1, Nx2, h₁, h₂, funcao, F)
+		display("─" ^ 40)  # Linha divisória
+        display("Teste $teste_num: f(x₁,x₂) = $funcao")
+        display("Malha uniforme: Nx1 = $Nx1; Nx2 = $Nx2; h₁ = $h₁; h₂ = $h₂;")
+        display("Resultado F:")
+        display(F)
+    end
+	
+    # TESTE 1: Malha 4x3 e função f constante
+    Nx1, Nx2 = 4, 3
+    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+
+    F = monta_F_quadrilatero((x₁, x₂) -> 4.0 / (h₁ * h₂), X₁, X₂, m, EQ, LG)
+    exibir_resultados(1, Nx1, Nx2, h₁, h₂, "4 / (h₁ * h₂)", F)
+	
+	
+    # TESTE 2: Malha 4x4 e função f(x₁,x₂) = (16 * 9 * x₁ * x₂) / (h₁ * h₂)^2
+    Nx1, Nx2 = 4, 4
+    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+
+    F = monta_F_quadrilatero((x₁, x₂) -> (16 * 9 * x₁ * x₂) / (h₁ * h₂)^2, 
+		                     X₁, X₂, m, EQ, LG)
+    exibir_resultados(2, Nx1, Nx2, h₁, h₂, "(16 * 9 * x₁ * x₂) / (h₁ * h₂)^2", F)
+	
+
+	# TESTE 3: Malha 4x3 com ruído nos nós internos e função f(x₁,x₂) = x₁ + x₂
+    Nx1, Nx2 = 4, 3
+    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+	
+	# Random.seed!(42)  # Define uma semente para reprodutibilidade
+	# malha2D_adiciona_ruido!(X₁, X₂, h₁, h₂)
+    X₁ = [0.0   0.0       0.0       0.0
+          0.25  0.266168  0.275391  0.25
+          0.5   0.493792  0.521668  0.5
+          0.75  0.747176  0.708237  0.75
+          1.0   1.0       1.0       1.0]
+    X₂ = [0.0   0.333333  0.666667  1.0
+          0.0   0.352246  0.633228  1.0
+          0.0   0.36139   0.693524  1.0
+          0.0   0.326172  0.689905  1.0
+          0.0   0.333333  0.666667  1.0]
+
+    # Calcula F
+    F = monta_F_quadrilatero((x₁, x₂) -> x₁ + x₂, X₁, X₂, m, EQ, LG)
+	display("─" ^ 40)  # Linha divisória
+	display("Teste 3: f(x₁,x₂) = x₁ + x₂")
+	display("Gera malha uniforme com Nx1=4 e Nx2=3 e adiciona ruido nos nós internos.")
+	display("X₁ =")
+	display(X₁)
+	display("X₂ =")
+	display(X₂)
+	display("Resultado F:")
+	display(F)
+end
+
+# ╔═╡ 76405500-25dd-4ff6-be68-aa5f86ae71e6
+teste_monta_F_quadrilatero()
+
+# ╔═╡ 95c4e028-12fe-4b5f-8a08-a6feba5ef87f
+function teste_monta_K_quadrilatero()
+	display("Teste 1: Malha uniforme de retângulos")
+	α, β = 1.0, 1.0
+    Nx1, Nx2 = 4, 3
+    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
+    m, EQ = monta_EQ(Nx1, Nx2)
+    LG = monta_LG(Nx1, Nx2)
+
+	# Monta a matriz K para a malha sem ruído
+	K = monta_K_quadrilatero(α, β, X₁, X₂, m, EQ, LG)
+
+	display("Parâmetros de entrada: α = 1.0; β = 1.0; Nx1 = 4; Nx2 = 3")
+	display("Resultado K:")
+	display(K)
+	display("─" ^ 40)  # Linha divisória
+
+	# TESTE 2: Malha 4x3 com ruído nos nós internos
+ 	# Random.seed!(42)  # Define uma semente para reprodutibilidade
+	# malha2D_adiciona_ruido!(X₁, X₂, h₁, h₂)
+    X₁ = [0.0   0.0       0.0       0.0
+          0.25  0.266168  0.275391  0.25
+          0.5   0.493792  0.521668  0.5
+          0.75  0.747176  0.708237  0.75
+          1.0   1.0       1.0       1.0]
+    X₂ = [0.0   0.333333  0.666667  1.0
+          0.0   0.352246  0.633228  1.0
+          0.0   0.36139   0.693524  1.0
+          0.0   0.326172  0.689905  1.0
+          0.0   0.333333  0.666667  1.0]
+    # Recalcula K com a malha com ruído
+    K = monta_K_quadrilatero(α, β, X₁, X₂, m, EQ, LG)
+	display("Teste 2: Adiciona ruído nos nós internos")
+	display("X₁ =")
+	display(X₁)
+	display("X₂ =")
+	display(X₂)
+	display("Resultado K:")
+	display(K)
+end
+
+# ╔═╡ a31bdbf9-c868-4357-9900-7704a907ec67
+teste_monta_K_quadrilatero()
+
 # ╔═╡ da6a91f3-4af1-4c67-84bb-8513f85c441c
 @doc raw"""
     malha2D_adiciona_ruido!(X₁::Matrix{Float64}, X₂::Matrix{Float64}, 
@@ -2752,111 +2940,6 @@ function malha2D_adiciona_ruido!(X₁::Matrix{Float64}, X₂::Matrix{Float64},
 		                        (rand(Float64, size(X₂[2:end-1,2:end-1])) .- 0.5) * 2
     end
 end
-
-# ╔═╡ 349ee82a-0889-4456-86ee-f7ea5372c4c4
-function teste_monta_F_quadrilatero()
-    # Função auxiliar para exibir resultados
-    function exibir_resultados(teste_num, Nx1, Nx2, h₁, h₂, funcao, F)
-		display("─" ^ 40)  # Linha divisória
-        display("Teste $teste_num: f(x₁,x₂) = $funcao")
-        display("Malha uniforme: Nx1 = $Nx1; Nx2 = $Nx2; h₁ = $h₁; h₂ = $h₂;")
-        display("Resultado F:")
-        display(F)
-		display("Resultado de @btime monta_F_quadrilatero(...)")
-    end
-	
-    # TESTE 1: Malha 4x3 e função f constante
-    Nx1, Nx2 = 4, 3
-    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
-    m, EQ = monta_EQ(Nx1, Nx2)
-    LG = monta_LG(Nx1, Nx2)
-
-    F = monta_F_quadrilatero((x₁, x₂) -> 4.0 / (h₁ * h₂), X₁, X₂, m, EQ, LG)
-    exibir_resultados(1, Nx1, Nx2, h₁, h₂, "4 / (h₁ * h₂)", F)
-	
-	@btime monta_F_quadrilatero((x₁, x₂) -> 4.0/($h₁ * $h₂), $X₁, $X₂, $m, $EQ, $LG)
-	
-    # TESTE 2: Malha 4x4 e função f(x₁,x₂) = (16 * 9 * x₁ * x₂) / (h₁ * h₂)^2
-    Nx1, Nx2 = 4, 4
-    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
-    m, EQ = monta_EQ(Nx1, Nx2)
-    LG = monta_LG(Nx1, Nx2)
-
-    F = monta_F_quadrilatero((x₁, x₂) -> (16 * 9 * x₁ * x₂) / (h₁ * h₂)^2, 
-		                     X₁, X₂, m, EQ, LG)
-    exibir_resultados(2, Nx1, Nx2, h₁, h₂, "(16 * 9 * x₁ * x₂) / (h₁ * h₂)^2", F)
-	
-	@btime monta_F_quadrilatero((x₁, x₂) -> (16 * 9 * x₁ * x₂)/($h₁ * $h₂)^2, $X₁,                               $X₂, $m, $EQ, $LG)
-
-	# TESTE 3: Malha 4x3 com ruído nos nós internos e função f(x₁,x₂) = x₁ + x₂
-    Nx1, Nx2 = 4, 3
-    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
-    m, EQ = monta_EQ(Nx1, Nx2)
-    LG = monta_LG(Nx1, Nx2)
-	
-	Random.seed!(42)  # Define uma semente para reprodutibilidade
-	malha2D_adiciona_ruido!(X₁, X₂, h₁, h₂)
-
-    # Calcula F
-    F = monta_F_quadrilatero((x₁, x₂) -> x₁ + x₂, X₁, X₂, m, EQ, LG)
-	display("─" ^ 40)  # Linha divisória
-	display("Teste 3: f(x₁,x₂) = x₁ + x₂")
-	display("Gera malha uniforme com Nx1=4 e Nx2=3 e adiciona ruido nos nós internos.")
-	display("X₁ =")
-	display(X₁)
-	display("X₂ =")
-	display(X₂)
-	display("Resultado F:")
-	display(F)
-	display("Resultado de @btime monta_F_quadrilatero(...)")
-	@btime monta_F_quadrilatero((x₁, x₂) -> x₁ + x₂, $X₁, $X₂, $m, $EQ, $LG);
-	
-	return nothing
-end
-
-# ╔═╡ 76405500-25dd-4ff6-be68-aa5f86ae71e6
-teste_monta_F_quadrilatero()
-
-# ╔═╡ 95c4e028-12fe-4b5f-8a08-a6feba5ef87f
-function teste_monta_K_quadrilatero()
-	display("Teste 1: Malha uniforme de retângulos")
-	α, β = 1.0, 1.0
-    Nx1, Nx2 = 4, 3
-    X₁, X₂, h₁, h₂ = malha2D(Nx1, Nx2)
-    m, EQ = monta_EQ(Nx1, Nx2)
-    LG = monta_LG(Nx1, Nx2)
-
-	# Monta a matriz K para a malha sem ruído
-	K = monta_K_quadrilatero(α, β, X₁, X₂, m, EQ, LG)
-
-	display("Parâmetros de entrada: α = 1.0; β = 1.0; Nx1 = 4; Nx2 = 3")
-	display("Resultado K:")
-	display(K)
-	display("Resultado de @btime monta_K_quadrilatero(...)")
-	@btime monta_K_quadrilatero($α, $β, $X₁, $X₂, $m, $EQ, $LG)
-	display("─" ^ 40)  # Linha divisória
-
-	# TESTE 2: Malha 4x3 com ruído nos nós internos
- 	Random.seed!(42)  # Define uma semente para reprodutibilidade
-	malha2D_adiciona_ruido!(X₁, X₂, h₁, h₂)
-
-    # Recalcula K com a malha com ruído
-    K = monta_K_quadrilatero(α, β, X₁, X₂, m, EQ, LG)
-	display("Teste 2: Adiciona ruído nos nós internos")
-	display("X₁ =")
-	display(X₁)
-	display("X₂ =")
-	display(X₂)
-	display("Resultado K:")
-	display(K)
-	display("Resultado de @btime monta_K_quadrilatero(...)")
-	@btime monta_K_quadrilatero($α, $β, $X₁, $X₂, $m, $EQ, $LG)
-
-	return nothing
-end
-
-# ╔═╡ a31bdbf9-c868-4357-9900-7704a907ec67
-teste_monta_K_quadrilatero()
 
 # ╔═╡ 44a17c38-4b0a-4501-b616-b926cf4a332a
 function solução_aproximada_vs_exata_quadrilatero()
@@ -4548,8 +4631,10 @@ version = "1.4.1+1"
 # ╟─98cb3a5e-9628-4e31-9869-bdb319393d60
 # ╟─956a6fcb-ee3a-4bb2-aaf5-109236982854
 # ╟─dcbca563-105a-48cf-95a5-bca36795eed7
+# ╠═9caa51d3-907d-4d22-88bd-90cce81f465c
 # ╟─973ed431-0e2d-43f5-a407-fe73f868ab40
 # ╟─dc66e8b9-2e82-4e3b-bca3-9e316510d5a3
+# ╠═826d67a3-cce6-4d36-b1ff-4c044710ea1d
 # ╟─73081276-d764-401a-8f92-cc6b09620613
 # ╟─301719ff-80d1-44ec-bb02-f92795d14e6a
 # ╟─38e32ff9-a9c2-4018-b69b-8442563aa133
@@ -4585,21 +4670,25 @@ version = "1.4.1+1"
 # ╟─d71f5899-2396-481c-bd51-258000aaccf7
 # ╟─a7201500-7247-456f-8496-485064e49959
 # ╟─1231b949-f351-4312-9059-4eff67bbff95
+# ╠═c26a7e5e-62c8-4009-811a-32f63a0f8811
 # ╟─c1568323-4f8d-41c1-8c53-3753ae35aa45
 # ╟─8755cea1-5c5a-4c66-97f4-72630ad53678
 # ╟─3fbc6a63-a6f0-4624-8d34-37936e179656
 # ╟─0d9e933e-5910-4b15-b91c-c2ff6a6eef8a
 # ╟─23b73cbf-428d-498e-8edd-b8df09eacaaa
 # ╟─6aa98255-9233-41bc-a103-2c6b6ba99779
+# ╠═7561310c-b747-4750-b2e1-aa0e4986fd36
 # ╟─b1c042e6-2b8b-43ab-bb84-6d522bc36b06
 # ╟─3edfd64c-460f-4c76-b320-1748c0a758a1
 # ╟─168d171c-d470-4a39-bb62-9efc5976d9b0
 # ╟─349ee82a-0889-4456-86ee-f7ea5372c4c4
 # ╟─76405500-25dd-4ff6-be68-aa5f86ae71e6
+# ╠═171ed27d-899b-4b19-a7f9-59f07034f38c
 # ╟─0c7eb736-b739-4970-9198-a4b0eafdbef7
 # ╟─f2d2dfaf-12b8-4634-b17f-4d464f13c67b
 # ╟─95c4e028-12fe-4b5f-8a08-a6feba5ef87f
 # ╟─a31bdbf9-c868-4357-9900-7704a907ec67
+# ╠═07c85862-2820-4946-b6e5-e8cfd3a493ad
 # ╟─fff9f8c5-b715-46d3-816c-9290e02f3df2
 # ╟─35a2344a-557e-40fe-9d20-77e46892d619
 # ╟─e112ce03-5627-4ef3-aa38-beb5d6025a75
